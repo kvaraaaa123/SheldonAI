@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+
+:root {
+    /* Core palette — deep navy + warm cream editorial */
+    --ink: #0d1117;
+    --ink-soft: #1c2333;
+    --ink-muted: #374151;
+    --cream: #f5f0e8;
+    --cream-soft: #faf7f2;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    /* Annotation category colors */
+    --color-weak-hook: #dc2626;
+    /* red */
+    --color-cliche: #9333ea;
+    /* purple */
+    --color-passive: #2563eb;
+    /* blue */
+    --color-vague: #d97706;
+    /* amber */
+    --color-too-long: #0891b2;
+    /* cyan */
+    --color-show-tell: #db2777;
+    /* pink */
+    --color-redundant: #64748b;
+    /* slate */
+    --color-awkward: #ea580c;
+    /* orange */
+    --color-missing: #059669;
+    /* emerald */
+    --color-strong: #16a34a;
+    /* green */
+    --background: var(--cream-soft);
+    --foreground: var(--ink);
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-body);
+    --font-display: var(--font-display);
+}
+
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body), 'Georgia', serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+
+/* ─── Annotation Highlights ─────────────────────────────────────────────────── */
+
+
+/* These classes are applied to individual sentence spans in the essay */
+
+.annotation-sentence {
+    border-radius: 2px;
+    padding: 1px 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.annotation-sentence:hover {
+    opacity: 0.85;
+}
+
+.annotation-sentence.active {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+}
+
+
+/* Each category gets its own underline color */
+
+.cat-weak_hook {
+    border-bottom-color: var(--color-weak-hook);
+    background: color-mix(in srgb, var(--color-weak-hook) 12%, transparent);
+}
+
+.cat-cliched_phrasing {
+    border-bottom-color: var(--color-cliche);
+    background: color-mix(in srgb, var(--color-cliche) 12%, transparent);
+}
+
+.cat-passive_voice {
+    border-bottom-color: var(--color-passive);
+    background: color-mix(in srgb, var(--color-passive) 12%, transparent);
+}
+
+.cat-lacks_specificity {
+    border-bottom-color: var(--color-vague);
+    background: color-mix(in srgb, var(--color-vague) 12%, transparent);
+}
+
+.cat-too_long {
+    border-bottom-color: var(--color-too-long);
+    background: color-mix(in srgb, var(--color-too-long) 12%, transparent);
+}
+
+.cat-show_dont_tell {
+    border-bottom-color: var(--color-show-tell);
+    background: color-mix(in srgb, var(--color-show-tell) 12%, transparent);
+}
+
+.cat-redundant {
+    border-bottom-color: var(--color-redundant);
+    background: color-mix(in srgb, var(--color-redundant) 12%, transparent);
+}
+
+.cat-word_choice {
+    border-bottom-color: var(--color-awkward);
+    background: color-mix(in srgb, var(--color-awkward) 12%, transparent);
+}
+
+.cat-unclear {
+    border-bottom-color: var(--color-missing);
+    background: color-mix(in srgb, var(--color-missing) 12%, transparent);
+}
+
+.cat-strong {
+    border-bottom-color: var(--color-strong);
+    background: color-mix(in srgb, var(--color-strong) 12%, transparent);
+}
+
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse-soft {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-fade-in {
+    animation: fadeSlideIn 0.3s ease forwards;
+}
+
+.animate-pulse-soft {
+    animation: pulse-soft 1.5s ease-in-out infinite;
+}
