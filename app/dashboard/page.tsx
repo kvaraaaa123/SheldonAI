@@ -52,16 +52,15 @@ export default function DashboardPage() {
   const profileIncomplete = !profileData || !profileData.onboarding_complete;
 
   const comingSoon: Record<string, string> = {
-    scholarships: "Coming soon — scholarship matching powered by your profile",
-    interviews:   "Coming soon — AI-powered mock interviews tailored to your target schools",
-    deadlines:    "Coming soon — deadline tracking synced with your school list",
+    interviews: "Coming soon — AI-powered mock interviews tailored to your target schools",
+    deadlines:  "Coming soon — deadline tracking synced with your school list",
   };
 
   const CARDS = [
     { id: "essays",      icon: "✦", label: "Essays",            desc: "Personal statements, supplements & Why Us essays", onClick: () => router.push("/annotate") },
     { id: "profile",     icon: "◈", label: "Profile",           desc: "Build your student profile",                       showDot: profileIncomplete, onClick: () => router.push("/profile") },
     { id: "activities",  icon: "✦", label: "Activities Advisor", desc: "Analyze and improve your activities list",          onClick: () => router.push("/activities") },
-    { id: "scholarships",icon: "◆", label: "Scholarships",      desc: "Find scholarships that match your profile",        onClick: () => setActiveCard(p => p === "scholarships" ? null : "scholarships") },
+    { id: "scholarships",icon: "◆", label: "Scholarships",      desc: "Find scholarships matched to your profile",         onClick: () => router.push("/scholarships") },
     { id: "interviews",  icon: "◉", label: "AI Interviews",     desc: "Practice college interviews with AI",              onClick: () => setActiveCard(p => p === "interviews"   ? null : "interviews") },
     { id: "deadlines",   icon: "◷", label: "Deadlines",         desc: "Track application deadlines",                      onClick: () => setActiveCard(p => p === "deadlines"    ? null : "deadlines") },
   ] as const;
