@@ -7,6 +7,7 @@ import { AnnotatedSentence } from "@/components/AnnotatedSentence";
 import { EssayChat } from "@/components/EssayChat";
 import { AnnotationResult, Annotation } from "@/lib/annotate";
 import { UNIVERSITY_PROMPTS, University, Prompt } from "@/lib/universityPrompts";
+import { UNIVERSITY_RESEARCH } from "@/lib/universityResearch";
 import { supabase } from "@/lib/supabase";
 
 const IVY_ORDER = ["harvard","yale","princeton","columbia","penn","brown","dartmouth","cornell"];
@@ -39,6 +40,15 @@ type EssayRecord = {
   created_at: string;
 };
 
+type SuppResearchData = {
+  essayWarning?: string;
+  philosophy?: string;
+  targetStudent?: string;
+  uniqueFeatures?: string;
+  categories?: { label: string; emoji: string; items: { name: string; detail: string }[] }[];
+  supplementalPrompts?: { title: string; text: string; wordLimit: number; isWhyUs?: boolean }[];
+};
+
 export default function AnnotatePage() {
   const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
@@ -46,11 +56,22 @@ export default function AnnotatePage() {
   const [userId,             setUserId]             = useState("");
   const [essayHistory,       setEssayHistory]       = useState<EssayRecord[]>([]);
   const [tab,                setTab]                = useState<"personal" | "supplemental">("personal");
+
+  // Read ?tab= from URL on mount to support deep-linking from whyus page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "supplemental") setTab("supplemental");
+  }, []);
   const [profileData,        setProfileData]        = useState<Record<string, unknown> | null>(null);
   const [activityGradesData, setActivityGradesData] = useState<Record<string, unknown> | null>(null);
   const [openAdvisorId,      setOpenAdvisorId]      = useState<string | null>(null);
   const [advisorContent,     setAdvisorContent]     = useState<Record<string, string>>({});
   const [advisorLoading,     setAdvisorLoading]     = useState<Record<string, boolean>>({});
+  const [savedColleges,      setSavedColleges]      = useState<{ university_name: string }[]>([]);
+  const [suppResearch,       setSuppResearch]       = useState<SuppResearchData | null>(null);
+  const [isSuppResearchLoading, setIsSuppResearchLoading] = useState(false);
+  const [openSuppCats,       setOpenSuppCats]       = useState<Set<string>>(new Set());
+  const [uniSearch,          setUniSearch]          = useState("");
 
   // Theme-derived colors
   const bg          = isDark ? "#080810"                    : "#FAFAF5";
@@ -71,14 +92,16 @@ export default function AnnotatePage() {
       const { user } = data.session;
       setUserEmail(user.email ?? "");
       setUserId(user.id);
-      const [{ data: rows }, { data: profileRow }, { data: gradesRow }] = await Promise.all([
+      const [{ data: rows }, { data: profileRow }, { data: gradesRow }, { data: collegeRows }] = await Promise.all([
         supabase.from("essays").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("activity_grades").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("college_lists").select("university_name").eq("user_id", user.id),
       ]);
       if (rows) setEssayHistory(rows as EssayRecord[]);
       if (profileRow) setProfileData(profileRow as Record<string, unknown>);
       if (gradesRow) setActivityGradesData(gradesRow as Record<string, unknown>);
+      if (collegeRows) setSavedColleges(collegeRows as { university_name: string }[]);
     });
   }, [router]);
 
@@ -149,10 +172,107 @@ export default function AnnotatePage() {
     .sort((a, b) => IVY_ORDER.indexOf(a.id) - IVY_ORDER.indexOf(b.id));
   const others = UNIVERSITY_PROMPTS.filter(u => OTHER_ORDER.includes(u.id))
     .sort((a, b) => OTHER_ORDER.indexOf(a.id) - OTHER_ORDER.indexOf(b.id));
+  const remaining = UNIVERSITY_PROMPTS
+    .filter(u => !IVY_ORDER.includes(u.id) && !OTHER_ORDER.includes(u.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const suppWordCount = suppEssay.trim().split(/\s+/).filter(Boolean).length;
+
+  const promptUniversityNames = new Set(UNIVERSITY_PROMPTS.map(u => u.name));
+
+  // For the currently-selected custom university, use real prompts from research if available
+  const customResearchPrompts: Prompt[] | null = (() => {
+    const sp = suppResearch?.supplementalPrompts;
+    if (!sp || sp.length === 0) return null;
+    return sp.map((p, i) => ({
+      id: `custom_prompt_${i}`,
+      title: p.title,
+      wordLimit: p.wordLimit || 650,
+      text: p.text,
+      intent: "Use the essay annotator to get sentence-level feedback on your supplemental essay.",
+      isWhyUs: p.isWhyUs ?? false,
+    }));
+  })();
+
+  const savedCustomUniversities: University[] = savedColleges
+    .filter(c => !promptUniversityNames.has(c.university_name))
+    .map(c => {
+      const isSelected = suppUniversity?.name === c.university_name;
+      const prompts = isSelected && customResearchPrompts
+        ? customResearchPrompts
+        : [{
+            id: `${c.university_name.toLowerCase().replace(/\s+/g, "_")}_supp`,
+            title: "Supplemental Essay",
+            wordLimit: 650,
+            text: "Paste your supplemental essay prompt here and annotate it below.",
+            intent: "Use the essay annotator to get sentence-level feedback on your supplemental essay.",
+            isWhyUs: false,
+          }];
+      return {
+        id: c.university_name.toLowerCase().replace(/\s+/g, "_"),
+        name: c.university_name,
+        shortName: c.university_name.split(" ").slice(0, 2).join(" "),
+        classYear: "Class of 2030",
+        applicationCycle: "2025–2026",
+        color: gold,
+        philosophy: suppResearch?.targetStudent || `${c.university_name} supplemental essay workspace.`,
+        prompts,
+      };
+    });
+
+  async function loadSuppResearch(universityName: string) {
+    // Step 1: Check lib/universityResearch.ts FIRST — instant, no API call
+    const localMatch = UNIVERSITY_RESEARCH.find(r =>
+      r.name.toLowerCase() === universityName.toLowerCase() ||
+      universityName.toLowerCase().includes(r.name.toLowerCase()) ||
+      r.name.toLowerCase().includes(universityName.toLowerCase()) ||
+      r.id === universityName.toLowerCase().replace(/\s+/g, "-")
+    );
+
+    if (localMatch) {
+      setSuppResearch(localMatch as SuppResearchData);
+      setIsSuppResearchLoading(false);
+      return;
+    }
+
+    // Step 2: Check Supabase cache
+    setIsSuppResearchLoading(true);
+    try {
+      const { data: cached } = await supabase
+        .from("university_research_cache")
+        .select("*")
+        .eq("university_name", universityName)
+        .maybeSingle();
+      if (cached?.research_data) {
+        setSuppResearch(cached.research_data as SuppResearchData);
+        setIsSuppResearchLoading(false);
+        return;
+      }
+      // Step 3: Call API as last resort
+      const res = await fetch("/api/university-research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ universityName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.research) {
+          setSuppResearch(data.research as SuppResearchData);
+          supabase.from("university_research_cache").insert({
+            university_name: universityName,
+            research_data: data.research,
+          }).then(() => {});
+        }
+      }
+    } catch (e) {
+      console.error("loadSuppResearch error:", e);
+    }
+    setIsSuppResearchLoading(false);
+  }
 
   function selectUniversity(u: University) {
     setSuppUniversity(u); setSuppPrompt(null); setSuppEssay(""); setSuppResult(null); setSuppError("");
+    setOpenSuppCats(new Set());
+    loadSuppResearch(u.name);
   }
 
   async function handleSuppAnnotate() {
@@ -448,19 +568,75 @@ export default function AnnotatePage() {
         </div>
       </nav>
 
-      {/* Right sidebar — university context (supplemental tab) */}
+      {/* Right sidebar — research arsenal (supplemental tab) */}
       {tab === "supplemental" && suppUniversity && (
         <div className="hidden md:flex flex-col fixed right-0 top-0 h-full w-72 border-l z-30 overflow-y-auto"
           style={{ borderColor: borderCol, background: bg }}>
           <div className="px-5 pt-6 pb-4 border-b" style={{ borderColor: borderCol }}>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: muted }}>Selected University</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: muted }}>Research Arsenal</p>
             <p className="text-[17px] font-bold leading-tight" style={{ color: suppUniversity.color }}>{suppUniversity.name}</p>
           </div>
-          <div className="px-5 py-5 border-b" style={{ borderColor: borderCol }}>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: gold }}>What They're Really Looking For</p>
-            <p className="text-[12px] leading-relaxed" style={{ color: muted }}>{suppUniversity.philosophy}</p>
-          </div>
-          {suppPrompt && !suppPrompt.id.endsWith("0") && (
+
+          {isSuppResearchLoading && (
+            <div className="px-5 py-5">
+              <p style={{ fontSize: 12, color: gold, fontStyle: "italic" }}>Researching {suppUniversity.name}...</p>
+            </div>
+          )}
+
+          {!isSuppResearchLoading && suppResearch && (
+            <div className="px-5 py-4">
+              {suppResearch.essayWarning && (
+                <div style={{ background: isDark ? "rgba(250,206,117,0.08)" : "rgba(250,206,117,0.15)", border: "0.5px solid rgba(250,206,117,0.4)", borderRadius: 8, padding: "8px 10px", fontSize: 11, color: muted, lineHeight: 1.55, marginBottom: 14 }}>
+                  ⚠ {suppResearch.essayWarning}
+                </div>
+              )}
+              {suppResearch.targetStudent && (
+                <div style={{ marginBottom: 10 }}>
+                  <p className="text-[9px] font-semibold uppercase tracking-widest mb-1" style={{ color: gold }}>Who They Want</p>
+                  <p className="text-[12px] leading-relaxed" style={{ color: muted }}>{suppResearch.targetStudent}</p>
+                </div>
+              )}
+              {suppResearch.uniqueFeatures && (
+                <div style={{ marginBottom: 10 }}>
+                  <p className="text-[9px] font-semibold uppercase tracking-widest mb-1" style={{ color: gold }}>What Makes Them Different</p>
+                  <p className="text-[12px] leading-relaxed" style={{ color: muted }}>{suppResearch.uniqueFeatures}</p>
+                </div>
+              )}
+              {suppResearch.philosophy && (
+                <div style={{ marginBottom: 12 }}>
+                  <p className="text-[9px] font-semibold uppercase tracking-widest mb-1" style={{ color: gold }}>Philosophy</p>
+                  <p className="text-[12px] leading-relaxed" style={{ color: muted }}>{suppResearch.philosophy}</p>
+                </div>
+              )}
+              {(suppResearch.categories || []).map((cat, ci) => {
+                const key = ci.toString();
+                const isOpen = openSuppCats.has(key);
+                return (
+                  <div key={ci} style={{ borderTop: `0.5px solid ${borderCol}` }}>
+                    <button
+                      onClick={() => setOpenSuppCats(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      <span className="text-[12px] font-medium" style={{ color: text }}>{cat.emoji} {cat.label}</span>
+                      <span className="text-[11px]" style={{ color: muted, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ paddingBottom: 6 }}>
+                        {cat.items.map((item, ii) => (
+                          <div key={ii} style={{ padding: "5px 0", borderTop: `0.5px solid ${borderCol}` }}>
+                            <div className="text-[11px] font-semibold mb-0.5" style={{ color: text }}>{item.name}</div>
+                            <div className="text-[11px] leading-relaxed" style={{ color: muted }}>{item.detail}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!isSuppResearchLoading && !suppResearch && suppPrompt && (
             <div className="px-5 py-5">
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: gold }}>Why They're Asking This</p>
               <p className="text-[11px] font-semibold mb-3" style={{ color: suppUniversity.color }}>{suppPrompt.title}</p>
@@ -490,7 +666,7 @@ export default function AnnotatePage() {
           })}
           <a href="/whyus"
             className="px-5 py-3 text-[14px] font-medium transition-all relative"
-            style={{ color: muted, textDecoration: "none" }}>
+            style={{ color: muted, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
             Why Us?
           </a>
         </div>
@@ -595,50 +771,85 @@ export default function AnnotatePage() {
               </p>
             </div>
 
-            {/* University grid */}
-            <div className="mb-8">
-              <p className="text-[11px] uppercase tracking-widest mb-3 font-medium" style={{ color: muted }}>The Ivy League</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-                {ivies.map(u => {
-                  const active = suppUniversity?.id === u.id;
-                  return (
-                    <button key={u.id} onClick={() => selectUniversity(u)}
-                      className="rounded-xl px-4 py-4 text-left transition-all border"
-                      style={{
-                        background: active ? `${u.color}22` : inputBg,
-                        borderColor: active ? u.color : borderCol,
-                      }}>
-                      <div className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: u.color }}>
-                        {u.shortName}
-                      </div>
-                      <div className="text-[11px]" style={{ color: muted }}>{u.prompts.length} prompts</div>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* University grid — only saved colleges */}
+            {(() => {
+              const savedNames = new Set(savedColleges.map(c => c.university_name));
 
-              <p className="text-[11px] uppercase tracking-widest mb-3 font-medium" style={{ color: muted }}>Stanford · MIT · Berkeley</p>
-              <div className="grid grid-cols-3 gap-2">
-                {others.map(u => {
-                  const active = suppUniversity?.id === u.id;
-                  return (
-                    <button key={u.id} onClick={() => selectUniversity(u)}
-                      className="rounded-xl px-4 py-4 text-left transition-all border"
-                      style={{
-                        background: active ? `${u.color}22` : inputBg,
-                        borderColor: active ? u.color : borderCol,
-                      }}>
-                      <div className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: u.color }}>
-                        {u.shortName}
-                      </div>
-                      <div className="text-[11px]" style={{ color: muted }}>
-                        {u.prompts.filter(p => !p.id.endsWith("0")).length} prompts
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+              // Universities in UNIVERSITY_PROMPTS that the student saved
+              const savedWithPrompts = UNIVERSITY_PROMPTS.filter(u => savedNames.has(u.name));
+
+              // Saved custom universities (not in UNIVERSITY_PROMPTS)
+              const customSaved = savedCustomUniversities;
+
+              const allSavedUniversities = [...savedWithPrompts, ...customSaved];
+
+              // Empty state: no colleges at all
+              if (savedColleges.length === 0) {
+                return (
+                  <div className="rounded-2xl border text-center py-16 px-8 mb-8" style={{ borderColor: borderCol, background: cardBg }}>
+                    <p className="text-4xl mb-4">🎓</p>
+                    <p className="text-[17px] font-semibold mb-2" style={{ color: text }}>No colleges in your list yet</p>
+                    <p className="text-[14px] leading-relaxed mb-6 max-w-sm mx-auto" style={{ color: muted }}>
+                      Go to My Colleges to add universities — their supplemental essays will appear here automatically.
+                    </p>
+                    <a href="/colleges"
+                      className="inline-block px-6 py-3 rounded-xl text-[14px] font-semibold"
+                      style={{ background: gold, color: isDark ? "#080810" : "#FAFAF5", textDecoration: "none" }}>
+                      Go to My Colleges →
+                    </a>
+                  </div>
+                );
+              }
+
+              // State: has saved colleges but none have prompts
+              if (allSavedUniversities.length === 0) {
+                return (
+                  <div className="rounded-2xl border text-center py-12 px-8 mb-8" style={{ borderColor: borderCol, background: cardBg }}>
+                    <p className="text-[15px] font-medium mb-2" style={{ color: text }}>Essay prompts loading</p>
+                    <p className="text-[13px] leading-relaxed max-w-sm mx-auto" style={{ color: muted }}>
+                      We are loading essay prompts for your saved colleges. Check back shortly or visit each college&#39;s page for their current prompts.
+                    </p>
+                    <a href="/colleges" className="inline-block mt-4 text-[13px]" style={{ color: gold, textDecoration: "none" }}>
+                      View My Colleges →
+                    </a>
+                  </div>
+                );
+              }
+
+              // Render saved university button
+              const renderUniButton = (u: University) => {
+                const active = suppUniversity?.id === u.id;
+                const promptCount = u.prompts.filter(p => !p.id.endsWith("0")).length;
+                return (
+                  <button key={u.id} onClick={() => selectUniversity(u)}
+                    className="rounded-xl px-4 py-4 text-left transition-all border"
+                    style={{
+                      background: active ? `${u.color}22` : inputBg,
+                      borderColor: active ? u.color : borderCol,
+                    }}>
+                    <div className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: u.color }}>
+                      {u.shortName}
+                    </div>
+                    <div className="text-[11px]" style={{ color: muted }}>{promptCount} prompt{promptCount !== 1 ? "s" : ""}</div>
+                  </button>
+                );
+              };
+
+              return (
+                <div className="mb-8">
+                  <p className="text-[11px] uppercase tracking-widest mb-3 font-medium" style={{ color: muted }}>
+                    My Saved Colleges · {allSavedUniversities.length} with essay prompts
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {allSavedUniversities.map(renderUniButton)}
+                  </div>
+                  <p className="text-[11px] mt-3" style={{ color: muted }}>
+                    <a href="/colleges" style={{ color: gold, textDecoration: "none" }}>+ Add more colleges</a>
+                    {" "}to see their prompts here
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Prompt list */}
             {suppUniversity && !suppResult && (
@@ -690,21 +901,20 @@ export default function AnnotatePage() {
                               )}
                             </div>
                             {!isInstruction && (
-                              <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                              <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                                 <button
                                   onClick={e => { e.stopPropagation(); handlePromptAdvise(prompt.id, prompt.text, prompt.title, suppUniversity?.name ?? ""); }}
                                   style={{
-                                    width: 20, height: 20, borderRadius: "50%",
-                                    border: `0.5px solid ${gold}80`, background: "transparent",
-                                    color: gold, fontSize: 11, cursor: "pointer",
-                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                    flexShrink: 0,
+                                    background: "rgba(184,134,11,0.12)",
+                                    border: "0.5px solid rgba(184,134,11,0.5)",
+                                    borderRadius: 6, padding: "4px 10px",
+                                    fontSize: 11, color: gold, cursor: "pointer", fontWeight: 500,
+                                    flexShrink: 0, whiteSpace: "nowrap" as const,
                                   }}
-                                  title="Get personalized topic advice"
                                 >
-                                  ?
+                                  💡 Topic Ideas
                                 </button>
-                                <div className="text-[10px] w-5 h-5 rounded-full border flex items-center justify-center"
+                                <div className="text-[10px] w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0"
                                   style={{ borderColor: isActive ? gold : borderCol, color: isActive ? gold : muted }}>
                                   {isActive ? "✓" : "+"}
                                 </div>

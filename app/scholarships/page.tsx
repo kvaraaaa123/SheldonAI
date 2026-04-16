@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { Scholarship } from "@/lib/scholarships";
+import ScholarshipEmblem from "@/components/ScholarshipEmblem";
 
 type MatchedScholarship = Scholarship & {
   matchScore?: number;
@@ -213,27 +214,49 @@ export default function ScholarshipsPage() {
       <button
         onClick={() => selectScholarship(s)}
         style={{
-          width: "100%", textAlign: "left", padding: "10px 14px",
+          width: "100%", textAlign: "left", padding: "12px 14px",
           background: isActive ? (isDark ? "rgba(201,169,110,0.1)" : "rgba(154,112,64,0.08)") : "transparent",
           border: "none", borderBottom: `0.5px solid ${border}`,
-          cursor: "pointer", display: "flex", flexDirection: "column", gap: 3,
+          cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 12,
+          position: "relative",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: isActive ? gold : text, lineHeight: 1.3, flex: 1 }}>
-            {s.name}
-          </span>
-          {s.matchScore !== undefined && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 999,
-              background: `${scoreColor(s.matchScore)}22`, color: scoreColor(s.matchScore),
-              flexShrink: 0,
-            }}>
-              {s.matchScore}%
+        {/* Match score badge — top right */}
+        {s.matchScore !== undefined && (
+          <div style={{
+            position: "absolute", top: 10, right: 10,
+            width: 36, height: 36, borderRadius: "50%",
+            border: `2px solid ${scoreColor(s.matchScore)}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexDirection: "column", flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(s.matchScore), lineHeight: 1 }}>
+              {s.matchScore}
             </span>
+            <span style={{ fontSize: 7, color: muted, lineHeight: 1 }}>%</span>
+          </div>
+        )}
+        {/* Emblem */}
+        <div style={{ flexShrink: 0 }}>
+          <ScholarshipEmblem name={s.name} size={40} />
+        </div>
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0, paddingRight: s.matchScore !== undefined ? 40 : 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? gold : text, lineHeight: 1.3, marginBottom: 2 }}>
+            {s.name}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: gold, marginBottom: 2 }}>{s.amount}</div>
+          <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>{s.provider}</div>
+          {s.tags?.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {s.tags.slice(0, 3).map(tag => (
+                <span key={tag} style={{ fontSize: 9, padding: "1px 6px", borderRadius: 999, border: `0.5px solid ${border}`, color: muted }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
           )}
         </div>
-        <span style={{ fontSize: 11, color: gold }}>{s.amount}</span>
       </button>
     );
   }
@@ -378,11 +401,16 @@ export default function ScholarshipsPage() {
                   <p style={{ fontSize: 12, color: muted, padding: "20px 16px" }}>No saved scholarships yet.</p>
                 ) : savedScholarships.map(saved => (
                   <button key={saved.id} onClick={() => selectScholarship(saved.scholarship_data as MatchedScholarship)}
-                    style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderBottom: `0.5px solid ${border}`, cursor: "pointer" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: text }}>{saved.scholarship_name}</div>
-                    <div style={{ fontSize: 11, color: gold, marginTop: 2 }}>{saved.scholarship_data.amount}</div>
-                    <div style={{ fontSize: 10, color: muted, marginTop: 2, display: "inline-block", padding: "1px 6px", border: `0.5px solid ${border}`, borderRadius: 999 }}>
-                      {saved.status}
+                    style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", borderBottom: `0.5px solid ${border}`, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flexShrink: 0 }}>
+                      <ScholarshipEmblem name={saved.scholarship_name} size={40} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: text, lineHeight: 1.3, marginBottom: 2 }}>{saved.scholarship_name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: gold, marginBottom: 4 }}>{saved.scholarship_data.amount}</div>
+                      <div style={{ fontSize: 10, color: muted, display: "inline-block", padding: "1px 6px", border: `0.5px solid ${border}`, borderRadius: 999 }}>
+                        {saved.status}
+                      </div>
                     </div>
                   </button>
                 ))
@@ -409,9 +437,14 @@ export default function ScholarshipsPage() {
 
                 {/* Top section */}
                 <div style={{ marginBottom: 24 }}>
+                  {/* Emblem centered */}
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                    <ScholarshipEmblem name={activeScholarship.name} size={80} />
+                  </div>
+
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 6 }}>
                     <div style={{ flex: 1 }}>
-                      <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 500, color: text, margin: "0 0 4px" }}>
+                      <h2 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 500, color: text, margin: "0 0 4px" }}>
                         {activeScholarship.name}
                       </h2>
                       <p style={{ fontSize: 14, color: muted, margin: 0 }}>{activeScholarship.provider}</p>
@@ -433,7 +466,7 @@ export default function ScholarshipsPage() {
                     )}
                   </div>
 
-                  <div style={{ fontSize: 20, fontWeight: 600, color: gold, marginBottom: 10 }}>
+                  <div style={{ fontSize: 28, fontWeight: 600, color: gold, marginBottom: 10 }}>
                     {activeScholarship.amount}
                   </div>
 

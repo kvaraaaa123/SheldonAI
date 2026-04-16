@@ -37,6 +37,9 @@ export default function WhyUsPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [essayHistory, setEssayHistory] = useState<EssayRecord[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [savedCollegeNames, setSavedCollegeNames] = useState<Set<string> | null>(null);
+  const [whyUsResearch, setWhyUsResearch] = useState<UniversityResearch | null>(null);
+  const [isResearchLoading, setIsResearchLoading] = useState(false);
 
   const gold = isDark ? "#C9A96E" : "#9a7040";
   const bg = isDark ? "#080810" : "#FAFAF5";
@@ -49,14 +52,13 @@ export default function WhyUsPage() {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.push("/"); return; }
       setUserEmail(data.session.user.email ?? "");
-      const { data: rows } = await supabase
-        .from("essays")
-        .select("*")
-        .eq("user_id", data.session.user.id)
-        .eq("essay_type", "why_us")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const [{ data: rows }, { data: colleges }] = await Promise.all([
+        supabase.from("essays").select("*").eq("user_id", data.session.user.id)
+          .eq("essay_type", "why_us").order("created_at", { ascending: false }).limit(10),
+        supabase.from("college_lists").select("university_name").eq("user_id", data.session.user.id),
+      ]);
       if (rows) setEssayHistory(rows as EssayRecord[]);
+      setSavedCollegeNames(new Set((colleges || []).map((c: { university_name: string }) => c.university_name)));
     });
   }, [router]);
 
@@ -65,13 +67,61 @@ export default function WhyUsPage() {
   }, [chatMessages]);
 
   const whyUsUniversities = UNIVERSITY_PROMPTS.filter(u =>
-    u.prompts.some(p => p.isWhyUs)
+    u.prompts.some(p => p.isWhyUs) &&
+    (savedCollegeNames === null || savedCollegeNames.has(u.name))
   );
 
   const whyUsPrompts = selectedUni?.prompts.filter(p => p.isWhyUs) ?? [];
-  const research = selectedUni
-    ? UNIVERSITY_RESEARCH.find(r => r.id === selectedUni.id) ?? null
-    : null;
+
+  async function loadWhyUsResearch(universityName: string) {
+    // Step 1: Check lib/universityResearch.ts FIRST — instant, no API call
+    const localMatch = UNIVERSITY_RESEARCH.find(r =>
+      r.name.toLowerCase() === universityName.toLowerCase() ||
+      universityName.toLowerCase().includes(r.name.toLowerCase()) ||
+      r.name.toLowerCase().includes(universityName.toLowerCase()) ||
+      r.id === universityName.toLowerCase().replace(/\s+/g, "-")
+    );
+
+    if (localMatch) {
+      setWhyUsResearch(localMatch);
+      setIsResearchLoading(false);
+      return;
+    }
+
+    // Step 2: Check Supabase cache
+    setIsResearchLoading(true);
+    try {
+      const { data: cached } = await supabase
+        .from("university_research_cache")
+        .select("*")
+        .eq("university_name", universityName)
+        .maybeSingle();
+      if (cached?.research_data) {
+        setWhyUsResearch(cached.research_data as UniversityResearch);
+        setIsResearchLoading(false);
+        return;
+      }
+      // Step 3: Call API as last resort
+      const res = await fetch("/api/university-research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ universityName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.research) {
+          setWhyUsResearch(data.research as UniversityResearch);
+          supabase.from("university_research_cache").insert({
+            university_name: universityName,
+            research_data: data.research,
+          }).then(() => {});
+        }
+      }
+    } catch (e) {
+      console.error("loadWhyUsResearch error:", e);
+    }
+    setIsResearchLoading(false);
+  }
 
   function toggleCat(key: string) {
     setOpenCats(prev => {
@@ -194,24 +244,32 @@ export default function WhyUsPage() {
         background: surface, position: "sticky", top: 0, zIndex: 50,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <a href="/dashboard" style={{ fontSize: 13, color: muted, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>← Dashboard</a>
           <a href="/annotate" style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 500, textDecoration: "none", color: text }}>
             Sheldon<span style={{ color: gold }}>AI</span>
           </a>
           <div style={{ display: "flex", gap: 4 }}>
-            {["Personal Statement", "Supplemental Essays", "Why Us?"].map(tab => (
-              <a
-                key={tab}
-                href={tab === "Personal Statement" || tab === "Supplemental Essays" ? "/annotate" : "/whyus"}
-                style={{
-                  padding: "5px 12px", fontSize: 12, borderRadius: 8,
-                  border: `0.5px solid ${tab === "Why Us?" ? border : "transparent"}`,
-                  color: tab === "Why Us?" ? text : muted,
-                  fontWeight: tab === "Why Us?" ? 500 : 400,
-                  textDecoration: "none",
-                  background: tab === "Why Us?" ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)") : "transparent",
-                }}
-              >{tab}</a>
-            ))}
+            {[
+              { label: "Personal Statement", href: "/annotate?tab=personal" },
+              { label: "Supplemental Essays", href: "/annotate?tab=supplemental" },
+              { label: "Why Us?", href: "/whyus" },
+            ].map(({ label, href }) => {
+              const active = label === "Why Us?";
+              return (
+                <a
+                  key={label}
+                  href={href}
+                  style={{
+                    padding: "5px 12px", fontSize: 12, borderRadius: 8,
+                    border: `0.5px solid ${active ? border : "transparent"}`,
+                    color: active ? text : muted,
+                    fontWeight: active ? 500 : 400,
+                    textDecoration: "none",
+                    background: active ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)") : "transparent",
+                  }}
+                >{label}</a>
+              );
+            })}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -306,46 +364,77 @@ export default function WhyUsPage() {
             The most research-dependent essay in college admissions
           </p>
 
-          {/* University grid */}
-          <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.09em", textTransform: "uppercase", color: muted, marginBottom: 10 }}>
-            Select a university with a Why Us essay
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
-            {whyUsUniversities.map(uni => (
-              <button
-                key={uni.id}
-                onClick={() => {
-                  setSelectedUni(uni);
-                  setSelectedPrompt(null);
-                  setResult(null);
-                  setChatMessages([]);
-                  setOpenCats(new Set(["0"]));
-                }}
-                style={{
-                  border: selectedUni?.id === uni.id
-                    ? `1.5px solid ${uni.color}`
-                    : `0.5px solid ${border}`,
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  background: selectedUni?.id === uni.id
-                    ? isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"
-                    : surface,
-                  transition: "all 0.15s",
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 500, color: uni.color, marginBottom: 2 }}>{uni.name}</div>
-                <div style={{ fontSize: 11, color: muted }}>Class of {uni.classYear} · {uni.applicationCycle}</div>
-                <div style={{
-                  display: "inline-block", marginTop: 5, fontSize: 9, fontWeight: 500,
-                  letterSpacing: "0.06em", padding: "2px 5px", borderRadius: 3,
-                  background: "rgba(139,94,60,0.12)", color: "#8B5E3C",
-                  border: "0.5px solid rgba(139,94,60,0.3)",
-                }}>WHY US</div>
-              </button>
-            ))}
-          </div>
+          {/* University grid — only saved colleges */}
+          {savedCollegeNames !== null && savedCollegeNames.size === 0 && (
+            <div style={{ border: `0.5px solid ${border}`, borderRadius: 14, padding: "32px 24px", textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🎓</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: text, marginBottom: 8 }}>No colleges in your list yet</div>
+              <div style={{ fontSize: 13, color: muted, lineHeight: 1.6, marginBottom: 20, maxWidth: 320, margin: "0 auto 20px" }}>
+                Go to My Colleges to add universities — their supplemental essays will appear here automatically.
+              </div>
+              <a href="/colleges" style={{
+                display: "inline-block", padding: "10px 24px", borderRadius: 10,
+                background: gold, color: isDark ? "#080810" : "#FAFAF5",
+                textDecoration: "none", fontSize: 14, fontWeight: 600,
+              }}>Go to My Colleges →</a>
+            </div>
+          )}
+
+          {savedCollegeNames !== null && savedCollegeNames.size > 0 && whyUsUniversities.length === 0 && (
+            <div style={{ border: `0.5px solid ${border}`, borderRadius: 14, padding: "28px 24px", textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 14, color: muted, lineHeight: 1.6 }}>
+                None of your saved colleges require a Why Us essay, or their prompts are still loading.
+              </div>
+              <a href="/colleges" style={{ display: "inline-block", marginTop: 12, fontSize: 13, color: gold, textDecoration: "none" }}>
+                View My Colleges →
+              </a>
+            </div>
+          )}
+
+          {whyUsUniversities.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.09em", textTransform: "uppercase", color: muted, marginBottom: 10 }}>
+                My saved colleges with Why Us essays
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
+                {whyUsUniversities.map(uni => (
+                  <button
+                    key={uni.id}
+                    onClick={() => {
+                      setSelectedUni(uni);
+                      setSelectedPrompt(null);
+                      setResult(null);
+                      setChatMessages([]);
+                      setOpenCats(new Set(["0"]));
+                      loadWhyUsResearch(uni.name);
+                    }}
+                    style={{
+                      border: selectedUni?.id === uni.id
+                        ? `1.5px solid ${uni.color}`
+                        : `0.5px solid ${border}`,
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      background: selectedUni?.id === uni.id
+                        ? isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"
+                        : surface,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 500, color: uni.color, marginBottom: 2 }}>{uni.name}</div>
+                    <div style={{ fontSize: 11, color: muted }}>{uni.applicationCycle}</div>
+                    <div style={{
+                      display: "inline-block", marginTop: 5, fontSize: 9, fontWeight: 500,
+                      letterSpacing: "0.06em", padding: "2px 5px", borderRadius: 3,
+                      background: "rgba(139,94,60,0.12)", color: "#8B5E3C",
+                      border: "0.5px solid rgba(139,94,60,0.3)",
+                    }}>WHY US</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Previous Why Us Essays */}
           {essayHistory.length > 0 && (
@@ -553,20 +642,20 @@ export default function WhyUsPage() {
               {/* Scrollable content */}
               <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
                 {/* Warning */}
-                {research && (
+                {whyUsResearch && (
                   <div style={{
                     margin: "10px 12px", background: isDark ? "rgba(250,206,117,0.08)" : "rgba(250,206,117,0.15)",
                     border: "0.5px solid rgba(250,206,117,0.4)", borderRadius: 8,
                     padding: "8px 10px", fontSize: 11, color: muted, lineHeight: 1.55,
                   }}>
-                    ⚠ {research.essayWarning}
+                    ⚠ {whyUsResearch.essayWarning}
                   </div>
                 )}
 
                 {/* Research categories */}
-                {research && (
+                {whyUsResearch && (
                   <div style={{ padding: "0 12px" }}>
-                    {research.categories.map((cat, ci) => {
+                    {whyUsResearch.categories.map((cat, ci) => {
                       const key = `${selectedUni.id}-${ci}`;
                       const isOpen = openCats.has(key);
                       return (

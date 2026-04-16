@@ -58,6 +58,17 @@ type ProfileData = {
   research_description: string | null;
   research_awards: string | null;
   activities: Activity[] | null;
+  campus_environment: string | null;
+  campus_size: string | null;
+  school_type: string | null;
+  distance_preference: string | null;
+  social_culture: string | null;
+  academic_intensity: string | null;
+  climate_preference: string | null;
+  financial_aid_need: string | null;
+  is_international: string | null;
+  english_test_type: string | null;
+  english_test_score: number | null;
   onboarding_complete: boolean;
 };
 
@@ -92,6 +103,17 @@ type Answers = {
   research_subject: string;
   research_description: string;
   research_awards: string;
+  campus_environment: string;
+  campus_size: string;
+  school_type: string;
+  distance_preference: string;
+  social_culture: string;
+  academic_intensity: string;
+  climate_preference: string;
+  financial_aid_need: string;
+  is_international: string;
+  english_test_type: string;
+  english_test_score: string;
 };
 
 type AnalysisResult = {
@@ -126,6 +148,10 @@ const EMPTY: Answers = {
   hobbies: [], passion_description: "",
   has_research: "", research_subject: "",
   research_description: "", research_awards: "",
+  campus_environment: "", campus_size: "", school_type: "",
+  distance_preference: "", social_culture: "", academic_intensity: "",
+  climate_preference: "", financial_aid_need: "",
+  is_international: "", english_test_type: "", english_test_score: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -293,9 +319,17 @@ const GROUP_TITLES = [
   "Have you built or discovered something?",
   "Test scores",
   "Where you\u2019re from",
+  "College preferences",
+  "Testing & Language",
 ];
 
-const TOTAL_GROUPS = 9;
+const TOTAL_GROUPS = 11;
+
+const ENGLISH_SPEAKING_COUNTRIES = new Set([
+  "United States", "Canada", "United Kingdom", "Australia", "New Zealand",
+  "Ireland", "Singapore", "South Africa", "Jamaica", "Barbados",
+  "Trinidad and Tobago", "Belize", "Guyana",
+]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -331,6 +365,17 @@ function profileToAnswers(p: ProfileData): Answers {
     research_subject: p.research_subject ?? "",
     research_description: p.research_description ?? "",
     research_awards: p.research_awards ?? "",
+    campus_environment: p.campus_environment ?? "",
+    campus_size: p.campus_size ?? "",
+    school_type: p.school_type ?? "",
+    distance_preference: p.distance_preference ?? "",
+    social_culture: p.social_culture ?? "",
+    academic_intensity: p.academic_intensity ?? "",
+    climate_preference: p.climate_preference ?? "",
+    financial_aid_need: p.financial_aid_need ?? "",
+    is_international: p.is_international ?? "",
+    english_test_type: p.english_test_type ?? "",
+    english_test_score: p.english_test_score != null ? String(p.english_test_score) : "",
   };
 }
 
@@ -521,6 +566,8 @@ export default function ProfilePage() {
       case 6: return true;
       case 7: return true;
       case 8: return !!(answers.country.trim() && answers.state.trim() && answers.phone.trim().length > 0);
+      case 9: return !!(answers.campus_environment && answers.campus_size);
+      case 10: return !!(answers.is_international);
       default: return false;
     }
   }
@@ -569,6 +616,17 @@ export default function ProfilePage() {
       research_description: answers.research_description || null,
       research_awards: answers.research_awards || null,
       activities: cleanActivities.length > 0 ? cleanActivities : null,
+      campus_environment: answers.campus_environment || null,
+      campus_size: answers.campus_size || null,
+      school_type: answers.school_type || null,
+      distance_preference: answers.distance_preference || null,
+      social_culture: answers.social_culture || null,
+      academic_intensity: answers.academic_intensity || null,
+      climate_preference: answers.climate_preference || null,
+      financial_aid_need: answers.financial_aid_need || null,
+      is_international: answers.is_international || null,
+      english_test_type: answers.english_test_type || null,
+      english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
     };
 
     const sessionResult = await supabase.auth.getSession();
@@ -613,6 +671,21 @@ export default function ProfilePage() {
       case 6: return { has_research: answers.has_research || null, research_subject: answers.research_subject || null, research_description: answers.research_description || null, research_awards: answers.research_awards || null };
       case 7: return { sat_math: answers.sat_math ? parseInt(answers.sat_math) : null, sat_english: answers.sat_english ? parseInt(answers.sat_english) : null, act: answers.act ? parseInt(answers.act) : null };
       case 8: return { country: answers.country || null, state: answers.state || null, phone: answers.phone || null };
+      case 9: return {
+        campus_environment: answers.campus_environment || null,
+        campus_size: answers.campus_size || null,
+        school_type: answers.school_type || null,
+        distance_preference: answers.distance_preference || null,
+        social_culture: answers.social_culture || null,
+        academic_intensity: answers.academic_intensity || null,
+        climate_preference: answers.climate_preference || null,
+        financial_aid_need: answers.financial_aid_need || null,
+      };
+      case 10: return {
+        is_international: answers.is_international || null,
+        english_test_type: answers.english_test_type || null,
+        english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+      };
       default: return {};
     }
   }
@@ -1232,6 +1305,132 @@ export default function ProfilePage() {
           </div>
         );
 
+      case 9:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("Campus environment")}
+              {renderPills("campus_environment", ["Urban city", "College town", "Suburban", "Rural", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Campus size")}
+              {renderPills("campus_size", ["Small (under 3,000)", "Medium (3,000–10,000)", "Large (10,000–20,000)", "Very large (20,000+)", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Type of school")}
+              {renderPills("school_type", ["Private university", "Public university", "Liberal arts college", "Research university", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Distance from home")}
+              {renderPills("distance_preference", ["Close (under 2 hrs)", "Moderate (2–5 hrs)", "Far (5+ hrs)", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Social culture")}
+              {renderPills("social_culture", ["Greek life active", "No Greek life", "Division I sports", "Quiet academic", "Artsy and creative", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Academic intensity")}
+              {renderPills("academic_intensity", ["Extremely rigorous", "Rigorous", "Balanced", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Climate")}
+              {renderPills("climate_preference", ["Warm and sunny", "Cold winters", "Mild year-round", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Financial aid need")}
+              {renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "No preference"])}
+            </div>
+          </div>
+        );
+
+      case 10: {
+        const intlCountries = ENGLISH_SPEAKING_COUNTRIES;
+        // Auto-detect if not yet set
+        if (!answers.is_international && answers.country) {
+          const autoVal = intlCountries.has(answers.country) ? "No" : "Yes";
+          setTimeout(() => setA("is_international", autoVal), 0);
+        }
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("Are you an international student?")}
+              {renderPills("is_international", ["Yes", "No"])}
+            </div>
+
+            {answers.is_international === "Yes" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  {renderLabel("Have you taken an English proficiency test?")}
+                  {renderPills("english_test_type", ["TOEFL iBT", "IELTS Academic", "Duolingo English Test", "Not yet", "Not required for my target schools"])}
+                </div>
+
+                {answers.english_test_type === "TOEFL iBT" && (
+                  <div>
+                    {renderLabel("TOEFL iBT Score")}
+                    <input
+                      type="number" min={0} max={120} step={1}
+                      placeholder="e.g. 105"
+                      value={answers.english_test_score}
+                      onChange={e => setA("english_test_score", e.target.value)}
+                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
+                    />
+                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most top universities require 100+ for TOEFL iBT. Harvard, Yale, Princeton require 100. MIT requires 90.</div>
+                  </div>
+                )}
+
+                {answers.english_test_type === "IELTS Academic" && (
+                  <div>
+                    {renderLabel("IELTS Band Score")}
+                    <input
+                      type="number" min={0} max={9} step={0.5}
+                      placeholder="e.g. 7.5"
+                      value={answers.english_test_score}
+                      onChange={e => setA("english_test_score", e.target.value)}
+                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
+                    />
+                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most top universities require 7.0+. Harvard and Yale require 7.0. Some schools accept 6.5.</div>
+                  </div>
+                )}
+
+                {answers.english_test_type === "Duolingo English Test" && (
+                  <div>
+                    {renderLabel("Duolingo English Test Score")}
+                    <input
+                      type="number" min={10} max={160}
+                      placeholder="e.g. 130"
+                      value={answers.english_test_score}
+                      onChange={e => setA("english_test_score", e.target.value)}
+                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
+                    />
+                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most universities that accept Duolingo require 120+.</div>
+                  </div>
+                )}
+
+                {answers.english_test_type === "Not yet" && (
+                  <div style={{
+                    background: isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.07)",
+                    border: `0.5px solid ${gold}55`, borderRadius: 8, padding: "12px 14px",
+                    fontSize: 13, color: muted, lineHeight: 1.6,
+                  }}>
+                    You will need to register and take a test before applying. TOEFL and IELTS are the most widely accepted. Register at ets.org (TOEFL) or ielts.org (IELTS).
+                  </div>
+                )}
+
+                {answers.english_test_type === "Not required for my target schools" && (
+                  <div style={{
+                    background: isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.07)",
+                    border: `0.5px solid ${gold}55`, borderRadius: 8, padding: "12px 14px",
+                    fontSize: 13, color: muted, lineHeight: 1.6,
+                  }}>
+                    Note: Verify this with each school on your list. Most US universities require proof of English proficiency for students from non-English-primary countries.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       default: return null;
     }
   }
@@ -1358,6 +1557,9 @@ export default function ProfilePage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: bg, color: text, fontFamily: "system-ui, -apple-system, sans-serif" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "60px 24px 80px" }}>
+
+          {/* Back link */}
+          <a href="/dashboard" style={{ fontSize: 13, color: muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 20, fontFamily: "system-ui, -apple-system, sans-serif" }}>← Dashboard</a>
 
           {/* Header */}
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 500, color: text, marginBottom: 4, marginTop: 0, letterSpacing: "-0.3px" }}>
@@ -1657,6 +1859,63 @@ export default function ProfilePage() {
             </>
           )}
 
+          {/* Section 10: College Preferences */}
+          {sectionCard(9, "College Preferences",
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("Campus Environment", fieldVal(answers.campus_environment))}
+              {fieldRow("Campus Size", fieldVal(answers.campus_size))}
+              {fieldRow("Type of School", fieldVal(answers.school_type))}
+              {fieldRow("Distance from Home", fieldVal(answers.distance_preference))}
+              {fieldRow("Social Culture", fieldVal(answers.social_culture))}
+              {fieldRow("Academic Intensity", fieldVal(answers.academic_intensity))}
+              {fieldRow("Climate", fieldVal(answers.climate_preference))}
+              {fieldRow("Financial Aid Need", fieldVal(answers.financial_aid_need))}
+            </div>,
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>{renderLabel("Campus environment")}{renderPills("campus_environment", ["Urban city", "College town", "Suburban", "Rural", "No preference"])}</div>
+              <div>{renderLabel("Campus size")}{renderPills("campus_size", ["Small (under 3,000)", "Medium (3,000–10,000)", "Large (10,000–20,000)", "Very large (20,000+)", "No preference"])}</div>
+              <div>{renderLabel("Type of school")}{renderPills("school_type", ["Private university", "Public university", "Liberal arts college", "Research university", "No preference"])}</div>
+              <div>{renderLabel("Distance from home")}{renderPills("distance_preference", ["Close (under 2 hrs)", "Moderate (2–5 hrs)", "Far (5+ hrs)", "No preference"])}</div>
+              <div>{renderLabel("Social culture")}{renderPills("social_culture", ["Greek life active", "No Greek life", "Division I sports", "Quiet academic", "Artsy and creative", "No preference"])}</div>
+              <div>{renderLabel("Academic intensity")}{renderPills("academic_intensity", ["Extremely rigorous", "Rigorous", "Balanced", "No preference"])}</div>
+              <div>{renderLabel("Climate")}{renderPills("climate_preference", ["Warm and sunny", "Cold winters", "Mild year-round", "No preference"])}</div>
+              <div>{renderLabel("Financial aid need")}{renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "No preference"])}</div>
+            </div>
+          )}
+
+          {/* Section 11: Testing & Language */}
+          {sectionCard(10, "Testing & Language",
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("International Student", fieldVal(answers.is_international))}
+              {answers.is_international === "Yes" && fieldRow("English Test", fieldVal(answers.english_test_type))}
+              {answers.is_international === "Yes" && answers.english_test_score && fieldRow("Test Score", fieldVal(answers.english_test_score))}
+            </div>,
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                {renderLabel("Are you an international student?")}
+                {renderPills("is_international", ["Yes", "No"])}
+              </div>
+              {answers.is_international === "Yes" && (
+                <div>
+                  {renderLabel("English proficiency test")}
+                  {renderPills("english_test_type", ["TOEFL iBT", "IELTS Academic", "Duolingo English Test", "Not yet", "Not required for my target schools"])}
+                </div>
+              )}
+              {answers.is_international === "Yes" && (answers.english_test_type === "TOEFL iBT" || answers.english_test_type === "IELTS Academic" || answers.english_test_type === "Duolingo English Test") && (
+                <div>
+                  {renderLabel("Test score")}
+                  <input
+                    type="number"
+                    placeholder="Enter your score"
+                    value={answers.english_test_score}
+                    onChange={e => setA("english_test_score", e.target.value)}
+                    style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     );
@@ -1887,7 +2146,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "flex", alignItems: currentGroup === 4 ? "flex-start" : "center", justifyContent: "center", padding: currentGroup === 4 ? "80px 24px 40px" : "80px 24px 60px", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 9 || currentGroup === 10) ? "80px 24px 40px" : "80px 24px 60px", width: "100%" }}>
         <div ref={groupRef} style={{ maxWidth: currentGroup === 4 ? 640 : 560, width: "100%", color: text }}>
 
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 500, color: text, textAlign: "center", marginBottom: 8, letterSpacing: "-0.2px", marginTop: 0 }}>
