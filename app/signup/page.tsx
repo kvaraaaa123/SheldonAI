@@ -16,6 +16,10 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError]                 = useState("");
   const [loading, setLoading]             = useState(false);
+  const [honeypot,  setHoneypot]  = useState("");
+  const [num1,      setNum1]      = useState(0);
+  const [num2,      setNum2]      = useState(0);
+  const [mathAnswer,setMathAnswer]= useState("");
 
   const gold   = "#9a7040";
   const bg     = "#FAFAF8";
@@ -27,6 +31,8 @@ export default function SignupPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) router.push("/dashboard");
     });
+    setNum1(Math.floor(Math.random() * 9) + 1);
+    setNum2(Math.floor(Math.random() * 9) + 1);
   }, [router]);
 
   function reset() { setError(""); setPassword(""); setConfirmPassword(""); }
@@ -35,6 +41,24 @@ export default function SignupPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    // Bot protection 1: honeypot
+    if (honeypot) return;
+    // Bot protection 2: math verification
+    if (mathAnswer.trim() !== String(num1 + num2)) {
+      setError("Please answer the verification question correctly.");
+      return;
+    }
+    // Bot protection 3: client-side rate limit
+    const now = Date.now();
+    const raw = localStorage.getItem("signup_attempts");
+    const attempts: number[] = raw ? JSON.parse(raw) : [];
+    const recent = attempts.filter((t: number) => now - t < 5 * 60 * 1000);
+    if (recent.length >= 3) {
+      setError("Too many attempts. Please wait a few minutes before trying again.");
+      return;
+    }
+    localStorage.setItem("signup_attempts", JSON.stringify([...recent, now]));
+
     if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
@@ -142,9 +166,32 @@ export default function SignupPage() {
       {/* Sign up */}
       {mode === "signup" && (
         <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {/* Honeypot — hidden from humans, bots fill it */}
+          <input
+            type="text"
+            name="website"
+            value={honeypot}
+            onChange={e => setHoneypot(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            style={{ display: "none", position: "absolute", left: -9999 }}
+          />
           <input type="email" placeholder="Email address" required value={email} onChange={e => setEmail(e.target.value)} style={input} />
           <input type="password" placeholder="Password" required value={password} onChange={e => setPassword(e.target.value)} style={input} />
           <input type="password" placeholder="Confirm password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={input} />
+          {/* Math verification */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, color: muted, marginBottom: 6, fontFamily: "system-ui,sans-serif" }}>
+              Quick check: what is {num1} + {num2}?
+            </label>
+            <input
+              type="text"
+              value={mathAnswer}
+              onChange={e => setMathAnswer(e.target.value)}
+              style={{ ...input, width: 80, display: "inline-block" }}
+              placeholder="?"
+            />
+          </div>
           {error && <p style={{ fontSize: 13, color: "#dc2626", margin: 0, fontFamily: "system-ui,sans-serif" }}>{error}</p>}
           <button type="submit" disabled={loading} style={{ ...btnGold, marginTop: "0.25rem" }}>
             {loading ? "Creating account…" : "Create account"}

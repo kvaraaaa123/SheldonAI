@@ -5,7 +5,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const { activities, intendedMajors, profile } = await req.json();
+    const { activities, intendedMajors, profile, hasDefiningActivity, definingActivityDescription } = await req.json();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activitiesText = activities.map((a: any, i: number) => `
@@ -19,6 +19,10 @@ Timing: ${[a.timing_school_year && "School year", a.timing_school_break && "Scho
 Hours/week: ${a.hours_per_week || "Not specified"}, Weeks/year: ${a.weeks_per_year || "Not specified"}
 Continue in college: ${a.continue_in_college || "Not specified"}
 `).join("\n");
+
+    const definingContext = hasDefiningActivity && definingActivityDescription
+      ? `\n\nThe student has identified one activity as especially defining to their character: ${definingActivityDescription}. When evaluating essay potential for this specific activity, treat it as potentially worthy of an essay topic IF the description suggests genuine rarity or depth of experience. For all other activities, maintain the standard essay novelty rule — essays should reveal what activities cannot show.`
+      : "";
 
     const userMessage = `Intended major(s): ${(intendedMajors || []).join(", ") || "Undecided"}
 
@@ -70,7 +74,7 @@ Return ONLY a valid JSON object with this exact structure, no other text, no mar
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 4000,
-      system: systemPrompt,
+      system: systemPrompt + definingContext,
       messages: [{ role: "user", content: userMessage }],
     });
 

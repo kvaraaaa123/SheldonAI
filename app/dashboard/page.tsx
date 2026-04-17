@@ -28,18 +28,25 @@ export default function DashboardPage() {
   const [profileData,    setProfileData]    = useState<ProfileData | null>(null);
   const [activeCard,     setActiveCard]     = useState<ActiveCard>(null);
   const [savedCollegeCount, setSavedCollegeCount] = useState(0);
+  const [essayCount,         setEssayCount]         = useState(0);
+  const [onboardingDismissed,setOnboardingDismissed] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOnboardingDismissed(localStorage.getItem("onboarding_dismissed") === "true");
+    }
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.push("/"); return; }
       const uid = data.session.user.id;
       setUserEmail(data.session.user.email ?? "");
-      const [{ data: profile }, { data: colleges }] = await Promise.all([
-        supabase.from("profiles").select("full_name, onboarding_complete").eq("user_id", uid).single(),
+      const [{ data: profile }, { data: colleges }, { count: essays }] = await Promise.all([
+        supabase.from("profiles").select("full_name, onboarding_complete").eq("user_id", uid).maybeSingle(),
         supabase.from("college_lists").select("id").eq("user_id", uid),
+        supabase.from("essays").select("id", { count: "exact" }).eq("user_id", uid),
       ]);
       if (profile) setProfileData(profile as ProfileData);
       if (colleges) setSavedCollegeCount(colleges.length);
+      setEssayCount(essays ?? 0);
     });
   }, [router]);
 
@@ -83,6 +90,9 @@ export default function DashboardPage() {
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 12, color: muted }}>{userEmail}</span>
+          <button onClick={() => router.push("/settings")} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 6 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={muted} strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
           <button onClick={handleSignOut} style={{ fontSize: 12, color: muted, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
             Sign out
           </button>
@@ -98,6 +108,7 @@ export default function DashboardPage() {
 
       {/* Body */}
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 28px" }}>
+      <style>{`@keyframes sheldon-onboarding-pulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}`}</style>
 
         {/* Hero */}
         <div style={{ marginBottom: 40 }}>
@@ -142,6 +153,61 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Onboarding Banner */}
+        {!onboardingDismissed && (!profileData || !profileData.onboarding_complete) && (
+          <div style={{ border: `1.5px solid ${gold}`, borderRadius: 16, padding: "28px 32px", background: "rgba(154,112,64,0.05)", marginBottom: 32 }}>
+            {/* Top row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: gold, animation: "sheldon-onboarding-pulse 2s infinite", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, fontWeight: 500, fontFamily: "system-ui, sans-serif" }}>
+                Start here — get the most out of SheldonAI
+              </span>
+            </div>
+            {/* Title */}
+            <h2 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 500, color: text, margin: "0 0 10px" }}>
+              Your application package starts with your profile
+            </h2>
+            {/* Paragraph */}
+            <p style={{ fontSize: 14, color: muted, lineHeight: 1.75, margin: "0 0 24px", fontFamily: "system-ui, sans-serif" }}>
+              SheldonAI is most powerful when it knows who you are. Your profile, activities list, and essays work together as one package — each layer informing the next. Here is the exact sequence that gets the best results:
+            </p>
+            {/* Three steps */}
+            <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
+              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: "0.5px solid rgba(154,112,64,0.3)", background: "rgba(154,112,64,0.08)" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: gold, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>① Profile first</div>
+                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>Build your complete profile — academics, background, activities, interests, and goals. This gives SheldonAI full context about who you are as a person and applicant.</div>
+              </div>
+              <div style={{ padding: "16px 12px", fontSize: 20, color: gold, flexShrink: 0, alignSelf: "center" }}>→</div>
+              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: `0.5px solid ${border}`, background: "transparent" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: muted, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>② Activities next</div>
+                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>Grade and rewrite your activities list. SheldonAI identifies your spike — your dominant theme — and flags which activities are strong enough to anchor an essay topic.</div>
+              </div>
+              <div style={{ padding: "16px 12px", fontSize: 20, color: muted, flexShrink: 0, alignSelf: "center" }}>→</div>
+              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: `0.5px solid ${border}`, background: "transparent" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: muted, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>③ Essays last</div>
+                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>With your profile and activities understood, SheldonAI gives truly personalized essay recommendations — knowing what to reveal that your activities list cannot show.</div>
+              </div>
+            </div>
+            {/* Info box */}
+            <div style={{ background: "rgba(154,112,64,0.04)", border: "0.5px solid rgba(154,112,64,0.25)", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+              <div style={{ fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, fontWeight: 500, marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>Why this sequence matters</div>
+              <p style={{ fontSize: 13, color: muted, lineHeight: 1.7, margin: 0, fontFamily: "system-ui, sans-serif" }}>
+                Your essays should not repeat what admissions officers already read in your activities list. SheldonAI&apos;s job is to help you open new windows — revealing dimensions of your character that a 150-character description cannot capture. The profile and activities list teach SheldonAI who you are. The essays then show what that person is like on the inside.
+              </p>
+            </div>
+            {/* CTA button */}
+            <button onClick={() => router.push("/profile")} style={{ width: "100%", padding: "14px 0", fontSize: 15, fontFamily: "system-ui, sans-serif", fontWeight: 600, borderRadius: 10, border: `1px solid ${gold}`, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, cursor: "pointer", marginBottom: 12, display: "block" }}>
+              Start with your profile →
+            </button>
+            {/* Dismiss link */}
+            <div style={{ textAlign: "center" }}>
+              <button type="button" onClick={() => { localStorage.setItem("onboarding_dismissed", "true"); setOnboardingDismissed(true); }} style={{ background: "none", border: "none", color: muted, fontSize: 13, cursor: "pointer", textDecoration: "underline", fontFamily: "system-ui, sans-serif" }}>
+                Already done? Dismiss this
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 36 }}>

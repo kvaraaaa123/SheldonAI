@@ -70,6 +70,13 @@ type ProfileData = {
   english_test_type: string | null;
   english_test_score: number | null;
   onboarding_complete: boolean;
+  private_passion: string | null;
+  unusual_trait: string | null;
+  changed_mind: string | null;
+  meaningful_influence: string | null;
+  world_problem: string | null;
+  us_citizenship: string | null;
+  us_resident_state: string | null;
 };
 
 type Answers = {
@@ -114,6 +121,13 @@ type Answers = {
   is_international: string;
   english_test_type: string;
   english_test_score: string;
+  private_passion: string;
+  unusual_trait: string;
+  changed_mind: string;
+  meaningful_influence: string;
+  world_problem: string;
+  us_citizenship: string;
+  us_resident_state: string;
 };
 
 type AnalysisResult = {
@@ -152,6 +166,9 @@ const EMPTY: Answers = {
   distance_preference: "", social_culture: "", academic_intensity: "",
   climate_preference: "", financial_aid_need: "",
   is_international: "", english_test_type: "", english_test_score: "",
+  private_passion: "", unusual_trait: "",
+  changed_mind: "", meaningful_influence: "", world_problem: "",
+  us_citizenship: "", us_resident_state: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -315,8 +332,8 @@ const GROUP_TITLES = [
   "Your academic year",
   "Your high school",
   "Your activities",
-  "What lights you up?",
-  "Have you built or discovered something?",
+  "Who you really are",
+  "How you think",
   "Test scores",
   "Where you\u2019re from",
   "College preferences",
@@ -376,6 +393,13 @@ function profileToAnswers(p: ProfileData): Answers {
     is_international: p.is_international ?? "",
     english_test_type: p.english_test_type ?? "",
     english_test_score: p.english_test_score != null ? String(p.english_test_score) : "",
+    private_passion: p.private_passion ?? "",
+    unusual_trait: p.unusual_trait ?? "",
+    changed_mind: p.changed_mind ?? "",
+    meaningful_influence: p.meaningful_influence ?? "",
+    world_problem: p.world_problem ?? "",
+    us_citizenship: p.us_citizenship ?? "",
+    us_resident_state: p.us_resident_state ?? "",
   };
 }
 
@@ -439,6 +463,12 @@ export default function ProfilePage() {
   const [uploadedFiles,  setUploadedFiles]  = useState<{name: string; base64: string}[]>([]);
   const [uploadedFields, setUploadedFields] = useState<string[]>([]);
   const [dragOver,       setDragOver]       = useState(false);
+
+  // Secondary activity upload (activities step)
+  const [showSecondaryUpload, setShowSecondaryUpload] = useState(false);
+  const [secondaryFiles,      setSecondaryFiles]      = useState<{name: string; base64: string}[]>([]);
+  const [secondaryUploading,  setSecondaryUploading]  = useState(false);
+  const secondaryFileRef = useRef<HTMLInputElement>(null);
 
   // Test score skips
   const [satMathSkipped, setSatMathSkipped] = useState(false);
@@ -562,7 +592,7 @@ export default function ProfilePage() {
       case 2: return !!(answers.education_status && answers.graduation_year && answers.start_semester);
       case 3: return !!(answers.high_school_name.trim() && answers.gpa && answers.class_rank);
       case 4: return activities.some(a => !!a.activity_type);
-      case 5: return !!(answers.hobbies.length > 0 && answers.passion_description.trim().length >= 20);
+      case 5: return true;
       case 6: return true;
       case 7: return true;
       case 8: return !!(answers.country.trim() && answers.state.trim() && answers.phone.trim().length > 0);
@@ -627,6 +657,13 @@ export default function ProfilePage() {
       is_international: answers.is_international || null,
       english_test_type: answers.english_test_type || null,
       english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+      private_passion: answers.private_passion || null,
+      unusual_trait: answers.unusual_trait || null,
+      changed_mind: answers.changed_mind || null,
+      meaningful_influence: answers.meaningful_influence || null,
+      world_problem: answers.world_problem || null,
+      us_citizenship: answers.us_citizenship || null,
+      us_resident_state: answers.us_resident_state || null,
     };
 
     const sessionResult = await supabase.auth.getSession();
@@ -667,10 +704,10 @@ export default function ProfilePage() {
         const clean = activities.filter(a => !!a.activity_type);
         return { activities: clean.length > 0 ? clean : null };
       }
-      case 5: return { hobbies: answers.hobbies.length > 0 ? answers.hobbies : null, passion_description: answers.passion_description || null };
-      case 6: return { has_research: answers.has_research || null, research_subject: answers.research_subject || null, research_description: answers.research_description || null, research_awards: answers.research_awards || null };
+      case 5: return { private_passion: answers.private_passion || null, unusual_trait: answers.unusual_trait || null };
+      case 6: return { changed_mind: answers.changed_mind || null, meaningful_influence: answers.meaningful_influence || null, world_problem: answers.world_problem || null };
       case 7: return { sat_math: answers.sat_math ? parseInt(answers.sat_math) : null, sat_english: answers.sat_english ? parseInt(answers.sat_english) : null, act: answers.act ? parseInt(answers.act) : null };
-      case 8: return { country: answers.country || null, state: answers.state || null, phone: answers.phone || null };
+      case 8: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, country: answers.country || null, state: answers.state || null, phone: answers.phone || null };
       case 9: return {
         campus_environment: answers.campus_environment || null,
         campus_size: answers.campus_size || null,
@@ -1164,6 +1201,76 @@ export default function ProfilePage() {
                 >+</button>
               </div>
             )}
+            <div style={{ marginTop: 24, borderTop: `0.5px solid ${border}`, paddingTop: 20 }}>
+              <button type="button" onClick={() => setShowSecondaryUpload(v => !v)}
+                style={{ fontSize: 13, color: muted, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 16, lineHeight: 1 }}>{showSecondaryUpload ? "▾" : "▸"}</span>
+                Have a Common App activities PDF? Import it to fill these in automatically
+              </button>
+              {showSecondaryUpload && (
+                <div style={{ marginTop: 16, border: `0.5px solid ${border}`, borderRadius: 10, padding: "16px 18px" }}>
+                  <div style={{ fontSize: 12, color: muted, marginBottom: 14, lineHeight: 1.6, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    Export your activities from Common App: Log in → go to Activities section → print/save as PDF. Upload it below and your activities will be imported automatically.
+                  </div>
+                  <input ref={secondaryFileRef} type="file" accept="application/pdf" multiple style={{ display: "none" }}
+                    onChange={async e => {
+                      if (!e.target.files) return;
+                      const pdfs = Array.from(e.target.files).filter(f => f.type === "application/pdf");
+                      const converted = await Promise.all(pdfs.map(async f => {
+                        const base64 = await new Promise<string>((resolve, reject) => {
+                          const reader = new FileReader();
+                          reader.onload = ev => resolve((ev.target?.result as string).split(",")[1]);
+                          reader.onerror = reject;
+                          reader.readAsDataURL(f);
+                        });
+                        return { name: f.name, base64 };
+                      }));
+                      setSecondaryFiles(converted);
+                      e.target.value = "";
+                    }} />
+                  {secondaryFiles.length === 0 ? (
+                    <button type="button" onClick={() => secondaryFileRef.current?.click()}
+                      style={{ fontSize: 13, color: gold, background: "transparent", border: `0.5px solid ${gold}`, borderRadius: 7, padding: "7px 16px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                      Browse PDF…
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                      <div style={{ fontSize: 13, color: text, fontFamily: "system-ui, -apple-system, sans-serif" }}>{secondaryFiles[0].name}</div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button type="button" disabled={secondaryUploading} onClick={async () => {
+                          setSecondaryUploading(true);
+                          try {
+                            const res = await fetch("/api/parse-common-app", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ files: secondaryFiles }),
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              if (Array.isArray(data.activities) && data.activities.length > 0) {
+                                const mapped = mapParsedActivities(data.activities);
+                                setActivities(mapped);
+                                setExpandedActivities(mapped.map((_, i) => i === 0));
+                              }
+                            }
+                          } catch { /* silently fail */ }
+                          setSecondaryUploading(false);
+                          setSecondaryFiles([]);
+                          setShowSecondaryUpload(false);
+                        }}
+                          style={{ fontSize: 13, color: isDark ? "#080810" : "#FAFAF5", background: gold, border: "none", borderRadius: 7, padding: "7px 16px", cursor: secondaryUploading ? "not-allowed" : "pointer", opacity: secondaryUploading ? 0.7 : 1, fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                          {secondaryUploading ? "Importing…" : "Import activities →"}
+                        </button>
+                        <button type="button" onClick={() => setSecondaryFiles([])}
+                          style={{ fontSize: 13, color: muted, background: "transparent", border: `0.5px solid ${border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -1171,17 +1278,29 @@ export default function ProfilePage() {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             <div>
-              {renderLabel("Personal interests and hobbies (select all that apply)")}
-              {renderMultiPills("hobbies", HOBBIES)}
+              {renderLabel("What\u2019s something you\u2019re passionate about that almost no one knows?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Not your main activity — something private, unusual, or underrated that reveals who you actually are.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
+                placeholder="e.g. I\u2019ve been quietly building a database of forgotten Cold War bunkers for three years..."
+                value={answers.private_passion}
+                onChange={e => setA("private_passion", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                {answers.private_passion.length}/400
+              </div>
             </div>
             <div>
-              {renderLabel("What are you most passionate about?")}
+              {renderLabel("What\u2019s the most unusual thing about you?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                A quirk, contradiction, or trait that surprises people when they find out. Don\u2019t be modest.
+              </div>
               <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
-                placeholder="Tell us in 2\u20133 sentences what drives you most"
-                value={answers.passion_description}
-                onChange={e => setA("passion_description", e.target.value)} />
+                placeholder="e.g. I memorized the Gettysburg Address at age 6 because I was bored..."
+                value={answers.unusual_trait}
+                onChange={e => setA("unusual_trait", e.target.value)} />
               <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                {answers.passion_description.length}/400
+                {answers.unusual_trait.length}/400
               </div>
             </div>
           </div>
@@ -1191,34 +1310,44 @@ export default function ProfilePage() {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             <div>
-              {renderLabel("Have you worked on any independent projects or research?")}
-              {renderPills("has_research", ["Yes \u2014 I have", "Not yet", "In progress"])}
-            </div>
-            {hasResearchActive && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                <div>
-                  {renderLabel("Subject area")}
-                  {renderPills("research_subject", RESEARCH_SUBJECTS)}
-                </div>
-                <div>
-                  {renderLabel("Briefly describe your project or research")}
-                  <textarea style={{ ...textareaStyle, height: 88 }} rows={3} maxLength={500}
-                    placeholder="What did you work on? What question were you trying to answer?"
-                    value={answers.research_description}
-                    onChange={e => setA("research_description", e.target.value)} />
-                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                    {answers.research_description.length}/500
-                  </div>
-                </div>
-                <div>
-                  {renderLabel("Awards, publications, or recognition (optional)")}
-                  <input style={inputStyle} type="text"
-                    placeholder="e.g. Intel ISEF semifinalist, published in school journal"
-                    value={answers.research_awards}
-                    onChange={e => setA("research_awards", e.target.value)} />
-                </div>
+              {renderLabel("Tell us about a time you completely changed your mind about something important.")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                What did you used to believe? What changed? This reveals intellectual honesty.
               </div>
-            )}
+              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={500}
+                placeholder="e.g. I used to believe that discipline alone determined success until I learned about..."
+                value={answers.changed_mind}
+                onChange={e => setA("changed_mind", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                {answers.changed_mind.length}/500
+              </div>
+            </div>
+            <div>
+              {renderLabel("What\u2019s the most meaningful thing you\u2019ve ever made, built, or created?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Could be a project, a piece of writing, a relationship, a system, or something no one else saw.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={500}
+                placeholder="e.g. I spent a year building a free tutoring service for undocumented students in my city..."
+                value={answers.meaningful_influence}
+                onChange={e => setA("meaningful_influence", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                {answers.meaningful_influence.length}/500
+              </div>
+            </div>
+            <div>
+              {renderLabel("If you could dedicate your life to solving one problem in the world, what would it be?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Be specific. \u201CWorld peace\u201D is not an answer. Admissions officers want to see how you think.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={500}
+                placeholder="e.g. The lack of early literacy intervention for children in rural areas who are two grade levels behind..."
+                value={answers.world_problem}
+                onChange={e => setA("world_problem", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                {answers.world_problem.length}/500
+              </div>
+            </div>
           </div>
         );
 
@@ -1249,8 +1378,25 @@ export default function ProfilePage() {
       case 8:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
+            <div>
+              {renderLabel("US citizenship or residency status")}
+              {renderPills("us_citizenship", ["US Citizen", "Permanent Resident (Green Card)", "DACA", "Visa Holder", "None of the above"])}
+            </div>
+            {(answers.us_citizenship === "US Citizen" || answers.us_citizenship === "Permanent Resident (Green Card)" || answers.us_citizenship === "DACA") && (
+              <div>
+                {renderLabel("Which US state are you a resident of?")}
+                <select
+                  value={answers.us_resident_state}
+                  onChange={e => setA("us_resident_state", e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  <option value="">Select a state…</option>
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ position: "relative" }}>
-              {renderLabel("Country")}
+              {renderLabel("Country of residence")}
               <input style={inputStyle} type="text" placeholder="e.g. United States"
                 value={answers.country}
                 onChange={e => { setA("country", e.target.value); setA("state", ""); setCountryOpen(true); }}
@@ -1751,43 +1897,49 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Section 6: Interests & Passions */}
-          {sectionCard(5, "Interests & Passions",
+          {/* Section 6: Who You Really Are */}
+          {sectionCard(5, "Who You Really Are",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Hobbies", tagsList(answers.hobbies))}
-              {fieldRow("Passion", fieldVal(answers.passion_description))}
+              {fieldRow("Private passion", fieldVal(answers.private_passion))}
+              {fieldRow("Unusual trait", fieldVal(answers.unusual_trait))}
             </div>,
             <>
-              <div>{renderLabel("Hobbies (select all that apply)")}{renderMultiPills("hobbies", HOBBIES)}</div>
               <div>
-                {renderLabel("What are you most passionate about?")}
-                <textarea style={{ ...textareaStyle, height: 100 }} maxLength={400} placeholder="Tell us in 2\u20133 sentences what drives you most" value={answers.passion_description} onChange={e => setA("passion_description", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.passion_description.length}/400</div>
+                {renderLabel("A passion almost no one knows about")}
+                <textarea style={{ ...textareaStyle, height: 100 }} maxLength={400} placeholder="Something private, unusual, or underrated..." value={answers.private_passion} onChange={e => setA("private_passion", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.private_passion.length}/400</div>
+              </div>
+              <div>
+                {renderLabel("The most unusual thing about you")}
+                <textarea style={{ ...textareaStyle, height: 100 }} maxLength={400} placeholder="A quirk or contradiction that surprises people..." value={answers.unusual_trait} onChange={e => setA("unusual_trait", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.unusual_trait.length}/400</div>
               </div>
             </>
           )}
 
-          {/* Section 7: Projects & Research */}
-          {sectionCard(6, "Projects & Research",
+          {/* Section 7: How You Think */}
+          {sectionCard(6, "How You Think",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Research / Projects", fieldVal(answers.has_research))}
-              {hasResearchActive && <>
-                {fieldRow("Subject Area", fieldVal(answers.research_subject))}
-                {fieldRow("Description", fieldVal(answers.research_description))}
-                {fieldRow("Awards / Recognition", fieldVal(answers.research_awards))}
-              </>}
+              {fieldRow("Changed your mind", fieldVal(answers.changed_mind))}
+              {fieldRow("Most meaningful creation", fieldVal(answers.meaningful_influence))}
+              {fieldRow("World problem", fieldVal(answers.world_problem))}
             </div>,
             <>
-              <div>{renderLabel("Independent projects or research?")}{renderPills("has_research", ["Yes \u2014 I have","Not yet","In progress"])}</div>
-              {hasResearchActive && <>
-                <div>{renderLabel("Subject area")}{renderPills("research_subject", RESEARCH_SUBJECTS)}</div>
-                <div>
-                  {renderLabel("Briefly describe")}
-                  <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="What did you work on?" value={answers.research_description} onChange={e => setA("research_description", e.target.value)} />
-                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.research_description.length}/500</div>
-                </div>
-                <div>{renderLabel("Awards / recognition (optional)")}<input style={inputStyle} type="text" placeholder="e.g. Intel ISEF semifinalist" value={answers.research_awards} onChange={e => setA("research_awards", e.target.value)} /></div>
-              </>}
+              <div>
+                {renderLabel("A time you completely changed your mind")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="What did you used to believe? What changed?" value={answers.changed_mind} onChange={e => setA("changed_mind", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.changed_mind.length}/500</div>
+              </div>
+              <div>
+                {renderLabel("Most meaningful thing you\u2019ve built or created")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="A project, relationship, system, or creation..." value={answers.meaningful_influence} onChange={e => setA("meaningful_influence", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.meaningful_influence.length}/500</div>
+              </div>
+              <div>
+                {renderLabel("One world problem you\u2019d dedicate your life to solving")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="Be specific \u2014 not world peace..." value={answers.world_problem} onChange={e => setA("world_problem", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.world_problem.length}/500</div>
+              </div>
             </>
           )}
 
@@ -1808,13 +1960,28 @@ export default function ProfilePage() {
           {/* Section 9: Location & Contact */}
           {sectionCard(8, "Location & Contact",
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
+              {fieldRow("US Citizenship", fieldVal(answers.us_citizenship))}
+              {answers.us_resident_state && fieldRow("US Resident State", fieldVal(answers.us_resident_state))}
               {fieldRow("Country", fieldVal(answers.country))}
               {fieldRow("State / Region", fieldVal(answers.state))}
               {fieldRow("Phone", fieldVal(answers.phone))}
             </div>,
             <>
+              <div>
+                {renderLabel("US citizenship or residency status")}
+                {renderPills("us_citizenship", ["US Citizen", "Permanent Resident (Green Card)", "DACA", "Visa Holder", "None of the above"])}
+              </div>
+              {(answers.us_citizenship === "US Citizen" || answers.us_citizenship === "Permanent Resident (Green Card)" || answers.us_citizenship === "DACA") && (
+                <div>
+                  {renderLabel("Which US state are you a resident of?")}
+                  <select value={answers.us_resident_state} onChange={e => setA("us_resident_state", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <option value="">Select a state…</option>
+                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
               <div style={{ position: "relative" }}>
-                {renderLabel("Country")}
+                {renderLabel("Country of residence")}
                 <input style={inputStyle} type="text" placeholder="e.g. United States" value={answers.country}
                   onChange={e => { setA("country", e.target.value); setA("state", ""); setCountryOpen(true); }}
                   onFocus={() => { if (answers.country) setCountryOpen(true); }}
@@ -1990,12 +2157,28 @@ export default function ProfilePage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: bg, color: text, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <div style={{ maxWidth: 520, width: "100%" }}>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 500, color: text, marginBottom: 12, marginTop: 0, textAlign: "center", letterSpacing: "-0.3px" }}>
-            Want to skip the questionnaire?
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 500, color: text, marginBottom: 8, marginTop: 0, textAlign: "center", letterSpacing: "-0.3px" }}>
+            Import your Common App
           </h1>
-          <p style={{ fontSize: 15, color: muted, textAlign: "center", marginBottom: 40, lineHeight: "1.6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-            Upload your Common App PDFs and we&apos;ll fill everything in automatically
+          <p style={{ fontSize: 15, color: muted, textAlign: "center", marginBottom: 24, lineHeight: "1.6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+            Upload your Common App PDF and we&apos;ll pre-fill your profile automatically
           </p>
+          <div style={{ border: `1px solid ${gold}55`, borderRadius: 12, padding: "16px 20px", background: isDark ? "rgba(201,169,110,0.05)" : "rgba(154,112,64,0.04)", marginBottom: 28 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, marginBottom: 12, fontFamily: "system-ui, -apple-system, sans-serif" }}>How to get your Common App PDF</div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+              {[
+                "Log in at commonapp.org",
+                "Go to My Colleges → any college you added → Application",
+                "Click \"Preview\" to open the PDF view",
+                "Download or print to PDF from your browser",
+              ].map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: gold, color: isDark ? "#080810" : "#FAFAF5", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "system-ui, -apple-system, sans-serif", marginTop: 1 }}>{i + 1}</div>
+                  <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>{step}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {uploadState === "idle" && (
             <>

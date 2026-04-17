@@ -115,6 +115,8 @@ export default function ActivitiesPage() {
   const [uploadedFiles,  setUploadedFiles]  = useState<{name: string; base64: string}[]>([]);
   const [dragOver,       setDragOver]       = useState(false);
   const [copiedIndex,    setCopiedIndex]    = useState<number | null>(null);
+  const [hasDefiningActivity, setHasDefiningActivity] = useState<boolean | null>(null);
+  const [definingActivity,    setDefiningActivity]    = useState("");
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const userIdRef     = useRef<string>("");
@@ -294,7 +296,13 @@ export default function ActivitiesPage() {
       const res = await fetch("/api/grade-activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activities: filled, intendedMajors: selectedMajors, profile }),
+        body: JSON.stringify({
+          activities: filled,
+          intendedMajors: selectedMajors,
+          profile,
+          hasDefiningActivity: hasDefiningActivity === true,
+          definingActivityDescription: definingActivity,
+        }),
       });
       if (!res.ok) return;
       const data: GradeResults = await res.json();
@@ -521,6 +529,9 @@ export default function ActivitiesPage() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <span style={{ fontSize: 12, color: muted }}>{userEmail}</span>
+        <button onClick={() => router.push("/settings")} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 6 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={muted} strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
         <button onClick={handleSignOut} style={{ fontSize: 12, color: muted, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontFamily: "system-ui, -apple-system, sans-serif" }}>Sign out</button>
         <button onClick={toggleTheme} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: `0.5px solid ${border}`, background: "none", cursor: "pointer", color: muted, fontSize: 15 }}>
           {isDark ? "☀" : "☽"}
@@ -646,6 +657,49 @@ export default function ActivitiesPage() {
                     </button>
                   </div>
                 )}
+                {/* One more thing */}
+                <div style={{ margin: "24px 0", padding: "20px 0", borderTop: `0.5px solid ${border}` }}>
+                  <div style={{ fontSize: 16, fontWeight: 500, color: text, marginBottom: 6, fontFamily: "system-ui, -apple-system, sans-serif" }}>One more thing</div>
+                  <div style={{ fontSize: 13, color: muted, marginBottom: 18, fontFamily: "system-ui, -apple-system, sans-serif" }}>This helps SheldonAI give you much smarter essay recommendations.</div>
+                  <div style={{ fontSize: 14, color: text, marginBottom: 14, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.6 }}>
+                    Was any activity on this list especially defining — something that fundamentally shaped your character, your leadership, or your story as an applicant?
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    {[{ val: true, label: "Yes, one stands out" }, { val: false, label: "No, they are all roughly equal importance" }].map(({ val, label }) => (
+                      <button key={label} type="button" onClick={() => setHasDefiningActivity(val)}
+                        style={{
+                          padding: "8px 18px", fontSize: 13, borderRadius: 999, cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif",
+                          borderStyle: "solid", borderWidth: "0.5px",
+                          borderColor: hasDefiningActivity === val ? gold : (isDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.25)"),
+                          backgroundColor: hasDefiningActivity === val ? (isDark ? "rgba(201,169,110,0.12)" : "rgba(154,112,64,0.10)") : "transparent",
+                          color: hasDefiningActivity === val ? gold : text,
+                          WebkitAppearance: "none", appearance: "none",
+                        }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {hasDefiningActivity === true && (
+                    <div>
+                      <div style={labelStyle}>Briefly describe why this activity was especially important to you as an applicant (2-3 sentences is enough)</div>
+                      <textarea
+                        style={{ ...inputStyle, resize: "vertical" as const, minHeight: 70, lineHeight: "1.5" }}
+                        maxLength={400}
+                        placeholder="e.g. My internship at the President's administration was where I first understood what it means to hold real responsibility — it changed how I think about leadership and public service."
+                        rows={3}
+                        value={definingActivity}
+                        onChange={e => setDefiningActivity(e.target.value)}
+                      />
+                      <div style={{ textAlign: "right", fontSize: 11, color: muted, marginTop: 3, fontFamily: "system-ui, -apple-system, sans-serif" }}>{definingActivity.length}/400</div>
+                      <div style={{ background: "rgba(154,112,64,0.04)", border: "0.5px solid rgba(154,112,64,0.2)", borderRadius: 8, padding: "12px 14px", marginTop: 10 }}>
+                        <p style={{ fontSize: 12, color: muted, lineHeight: 1.65, margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                          SheldonAI uses this to evaluate whether this activity is extraordinary enough to anchor a personal statement or supplemental essay. Most activities are not — and that is perfectly fine. The goal is for your essays to reveal something your activities list cannot show, giving admissions officers a fuller picture of who you are.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button type="button" onClick={gradeActivities} disabled={!hasActivities}
                   style={{ width: "100%", maxWidth: 500, display: "block", padding: "14px 0", fontSize: 15, fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 500, borderRadius: 10, border: `1px solid ${gold}`, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, cursor: !hasActivities ? "not-allowed" : "pointer", opacity: !hasActivities ? 0.35 : 1, WebkitAppearance: "none", appearance: "none", transition: "opacity 0.15s" }}>
                   Analyze My Activities →

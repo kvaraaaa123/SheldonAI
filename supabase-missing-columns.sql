@@ -1,0 +1,23 @@
+-- Run this in the Supabase SQL Editor (https://supabase.com/dashboard → SQL Editor)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS academic_intensity text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS campus_environment text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS campus_size text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS school_type text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS distance_preference text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS social_culture text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS climate_preference text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS financial_aid_need text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_international text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS english_test_type text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS english_test_score numeric(5,1);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS private_passion text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS unusual_trait text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS changed_mind text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS meaningful_influence text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS world_problem text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS us_citizenship text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS us_resident_state text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS defining_activity text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS has_defining_activity text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feedback_style text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS essay_feedback_depth text;
