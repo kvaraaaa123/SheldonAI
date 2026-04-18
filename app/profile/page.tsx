@@ -77,6 +77,12 @@ type ProfileData = {
   world_problem: string | null;
   us_citizenship: string | null;
   us_resident_state: string | null;
+  friday_night: string | null;
+  obsession_topic: string | null;
+  self_taught: string | null;
+  common_misconception: string | null;
+  embarrassing_pride: string | null;
+  guaranteed_success: string | null;
 };
 
 type Answers = {
@@ -128,6 +134,12 @@ type Answers = {
   world_problem: string;
   us_citizenship: string;
   us_resident_state: string;
+  friday_night: string;
+  obsession_topic: string;
+  self_taught: string;
+  common_misconception: string;
+  embarrassing_pride: string;
+  guaranteed_success: string;
 };
 
 type AnalysisResult = {
@@ -169,6 +181,8 @@ const EMPTY: Answers = {
   private_passion: "", unusual_trait: "",
   changed_mind: "", meaningful_influence: "", world_problem: "",
   us_citizenship: "", us_resident_state: "",
+  friday_night: "", obsession_topic: "", self_taught: "",
+  common_misconception: "", embarrassing_pride: "", guaranteed_success: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -332,12 +346,12 @@ const GROUP_TITLES = [
   "Your academic year",
   "Your high school",
   "Your activities",
-  "Who you really are",
   "How you think",
   "Test scores",
-  "Where you\u2019re from",
+  "Where you're from",
   "College preferences",
   "Testing & Language",
+  "The stuff that makes you, you",
 ];
 
 const TOTAL_GROUPS = 11;
@@ -400,6 +414,12 @@ function profileToAnswers(p: ProfileData): Answers {
     world_problem: p.world_problem ?? "",
     us_citizenship: p.us_citizenship ?? "",
     us_resident_state: p.us_resident_state ?? "",
+    friday_night: p.friday_night ?? "",
+    obsession_topic: p.obsession_topic ?? "",
+    self_taught: p.self_taught ?? "",
+    common_misconception: p.common_misconception ?? "",
+    embarrassing_pride: p.embarrassing_pride ?? "",
+    guaranteed_success: p.guaranteed_success ?? "",
   };
 }
 
@@ -594,10 +614,10 @@ export default function ProfilePage() {
       case 4: return activities.some(a => !!a.activity_type);
       case 5: return true;
       case 6: return true;
-      case 7: return true;
-      case 8: return !!(answers.country.trim() && answers.state.trim() && answers.phone.trim().length > 0);
-      case 9: return !!(answers.campus_environment && answers.campus_size);
-      case 10: return !!(answers.is_international);
+      case 7: return !!(answers.country.trim() && answers.phone.trim().length > 0);
+      case 8: return !!(answers.campus_environment && answers.campus_size);
+      case 9: return !!(answers.is_international);
+      case 10: return true;
       default: return false;
     }
   }
@@ -664,6 +684,12 @@ export default function ProfilePage() {
       world_problem: answers.world_problem || null,
       us_citizenship: answers.us_citizenship || null,
       us_resident_state: answers.us_resident_state || null,
+      friday_night: answers.friday_night || null,
+      obsession_topic: answers.obsession_topic || null,
+      self_taught: answers.self_taught || null,
+      common_misconception: answers.common_misconception || null,
+      embarrassing_pride: answers.embarrassing_pride || null,
+      guaranteed_success: answers.guaranteed_success || null,
     };
 
     const sessionResult = await supabase.auth.getSession();
@@ -704,11 +730,10 @@ export default function ProfilePage() {
         const clean = activities.filter(a => !!a.activity_type);
         return { activities: clean.length > 0 ? clean : null };
       }
-      case 5: return { private_passion: answers.private_passion || null, unusual_trait: answers.unusual_trait || null };
-      case 6: return { changed_mind: answers.changed_mind || null, meaningful_influence: answers.meaningful_influence || null, world_problem: answers.world_problem || null };
-      case 7: return { sat_math: answers.sat_math ? parseInt(answers.sat_math) : null, sat_english: answers.sat_english ? parseInt(answers.sat_english) : null, act: answers.act ? parseInt(answers.act) : null };
-      case 8: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, country: answers.country || null, state: answers.state || null, phone: answers.phone || null };
-      case 9: return {
+      case 5: return { changed_mind: answers.changed_mind || null, meaningful_influence: answers.meaningful_influence || null, world_problem: answers.world_problem || null };
+      case 6: return { sat_math: answers.sat_math ? parseInt(answers.sat_math) : null, sat_english: answers.sat_english ? parseInt(answers.sat_english) : null, act: answers.act ? parseInt(answers.act) : null };
+      case 7: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, country: answers.country || null, phone: answers.phone || null };
+      case 8: return {
         campus_environment: answers.campus_environment || null,
         campus_size: answers.campus_size || null,
         school_type: answers.school_type || null,
@@ -718,10 +743,18 @@ export default function ProfilePage() {
         climate_preference: answers.climate_preference || null,
         financial_aid_need: answers.financial_aid_need || null,
       };
-      case 10: return {
+      case 9: return {
         is_international: answers.is_international || null,
         english_test_type: answers.english_test_type || null,
         english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+      };
+      case 10: return {
+        friday_night: answers.friday_night || null,
+        obsession_topic: answers.obsession_topic || null,
+        self_taught: answers.self_taught || null,
+        common_misconception: answers.common_misconception || null,
+        embarrassing_pride: answers.embarrassing_pride || null,
+        guaranteed_success: answers.guaranteed_success || null,
       };
       default: return {};
     }
@@ -919,7 +952,7 @@ export default function ProfilePage() {
     : [];
 
   const hasResearchActive =
-    answers.has_research === "Yes \u2014 I have" || answers.has_research === "In progress";
+    answers.has_research === "Yes \— I have" || answers.has_research === "In progress";
 
   // ── Activity card (onboarding + edit view) ─────────────────────────────────
 
@@ -1142,7 +1175,7 @@ export default function ProfilePage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
             <div style={{ position: "relative" }}>
               {renderLabel("Which high school do you attend?")}
-              <input style={inputStyle} type="text" placeholder="Start typing your school\u2026"
+              <input style={inputStyle} type="text" placeholder="Start typing your school\…"
                 value={answers.high_school_name}
                 onChange={e => { setA("high_school_name", e.target.value); setHsOpen(true); }}
                 onFocus={() => { if (answers.high_school_name) setHsOpen(true); }}
@@ -1278,38 +1311,6 @@ export default function ProfilePage() {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             <div>
-              {renderLabel("What\u2019s something you\u2019re passionate about that almost no one knows?")}
-              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
-                Not your main activity — something private, unusual, or underrated that reveals who you actually are.
-              </div>
-              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
-                placeholder="e.g. I\u2019ve been quietly building a database of forgotten Cold War bunkers for three years..."
-                value={answers.private_passion}
-                onChange={e => setA("private_passion", e.target.value)} />
-              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                {answers.private_passion.length}/400
-              </div>
-            </div>
-            <div>
-              {renderLabel("What\u2019s the most unusual thing about you?")}
-              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
-                A quirk, contradiction, or trait that surprises people when they find out. Don\u2019t be modest.
-              </div>
-              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
-                placeholder="e.g. I memorized the Gettysburg Address at age 6 because I was bored..."
-                value={answers.unusual_trait}
-                onChange={e => setA("unusual_trait", e.target.value)} />
-              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                {answers.unusual_trait.length}/400
-              </div>
-            </div>
-          </div>
-        );
-
-      case 6:
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
-            <div>
               {renderLabel("Tell us about a time you completely changed your mind about something important.")}
               <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
                 What did you used to believe? What changed? This reveals intellectual honesty.
@@ -1323,7 +1324,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div>
-              {renderLabel("What\u2019s the most meaningful thing you\u2019ve ever made, built, or created?")}
+              {renderLabel("What's the most meaningful thing you've ever made, built, or created?")}
               <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
                 Could be a project, a piece of writing, a relationship, a system, or something no one else saw.
               </div>
@@ -1338,7 +1339,7 @@ export default function ProfilePage() {
             <div>
               {renderLabel("If you could dedicate your life to solving one problem in the world, what would it be?")}
               <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
-                Be specific. \u201CWorld peace\u201D is not an answer. Admissions officers want to see how you think.
+                Be specific. "World peace" is not an answer. Admissions officers want to see how you think.
               </div>
               <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={500}
                 placeholder="e.g. The lack of early literacy intervention for children in rural areas who are two grade levels behind..."
@@ -1351,7 +1352,7 @@ export default function ProfilePage() {
           </div>
         );
 
-      case 7:
+      case 6:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
             {[
@@ -1375,14 +1376,14 @@ export default function ProfilePage() {
           </div>
         );
 
-      case 8:
+      case 7:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
             <div>
               {renderLabel("US citizenship or residency status")}
-              {renderPills("us_citizenship", ["US Citizen", "Permanent Resident (Green Card)", "DACA", "Visa Holder", "None of the above"])}
+              {renderPills("us_citizenship", ["US Citizen only", "Dual citizen", "Permanent Resident (Green Card)", "Visa Holder", "None of the above"])}
             </div>
-            {(answers.us_citizenship === "US Citizen" || answers.us_citizenship === "Permanent Resident (Green Card)" || answers.us_citizenship === "DACA") && (
+            {(answers.us_citizenship === "US Citizen only" || answers.us_citizenship === "Dual citizen" || answers.us_citizenship === "Permanent Resident (Green Card)") && (
               <div>
                 {renderLabel("Which US state are you a resident of?")}
                 <select
@@ -1415,33 +1416,6 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            <div style={{ position: "relative" }}>
-              {renderLabel("State / Region")}
-              {isUSA ? (
-                <>
-                  <input style={inputStyle} type="text" placeholder="e.g. Massachusetts"
-                    value={answers.state}
-                    onChange={e => { setA("state", e.target.value); setStateOpen(true); }}
-                    onFocus={() => { if (answers.state) setStateOpen(true); }}
-                    onBlur={() => setTimeout(() => setStateOpen(false), 150)} />
-                  {stateOpen && stateSuggestions.length > 0 && (
-                    <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, backgroundColor: surface, borderStyle: "solid", borderWidth: "0.5px", borderColor: border, borderRadius: 8, boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 220, overflowY: "auto" }}>
-                      {stateSuggestions.map(st => (
-                        <button key={st} type="button" onMouseDown={e => e.preventDefault()}
-                          onClick={() => { setA("state", st); setStateOpen(false); }}
-                          style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, backgroundColor: "transparent", borderWidth: 0, fontFamily: "system-ui, -apple-system, sans-serif", cursor: "pointer" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                        >{st}</button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <input style={inputStyle} type="text" placeholder="e.g. Ontario"
-                  value={answers.state} onChange={e => setA("state", e.target.value)} />
-              )}
-            </div>
             <div>
               {renderLabel("Phone number")}
               <input style={inputStyle} type="tel" placeholder="+1 (555) 000-0000"
@@ -1451,7 +1425,7 @@ export default function ProfilePage() {
           </div>
         );
 
-      case 9:
+      case 8:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             <div>
@@ -1489,9 +1463,8 @@ export default function ProfilePage() {
           </div>
         );
 
-      case 10: {
+      case 9: {
         const intlCountries = ENGLISH_SPEAKING_COUNTRIES;
-        // Auto-detect if not yet set
         if (!answers.is_international && answers.country) {
           const autoVal = intlCountries.has(answers.country) ? "No" : "Yes";
           setTimeout(() => setA("is_international", autoVal), 0);
@@ -1576,6 +1549,36 @@ export default function ProfilePage() {
           </div>
         );
       }
+
+      case 10:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            {[
+              { label: "What do you do at 11pm on a free Friday?", field: "friday_night" as keyof Answers, placeholder: "e.g. I rewatch the same three documentary series and reorganize my bookshelf..." },
+              { label: "What could you talk about for three hours without preparing?", field: "obsession_topic" as keyof Answers, placeholder: "e.g. The geopolitics of water rights in Central Asia..." },
+              { label: "What have you taught yourself that nobody asked you to learn?", field: "self_taught" as keyof Answers, placeholder: "e.g. I taught myself to read Ottoman Turkish to understand my great-grandmother's letters..." },
+              { label: "What do most people get completely wrong about something you know well?", field: "common_misconception" as keyof Answers, placeholder: "e.g. People think being good at math means being fast. It means being comfortable being stuck..." },
+              { label: "What is the most embarrassing thing you are genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation on Earth..." },
+              { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure and fix it..." },
+            ].map(({ label, field, placeholder }) => (
+              <div key={field}>
+                {renderLabel(label)}
+                <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={300}
+                  placeholder={placeholder}
+                  value={answers[field] as string}
+                  onChange={e => setA(field, e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  {(answers[field] as string).length}/300
+                </div>
+              </div>
+            ))}
+            <div style={{ borderLeft: `3px solid ${gold}`, paddingLeft: 14, marginTop: 4 }}>
+              <p style={{ fontSize: 12, color: muted, lineHeight: 1.65, margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                SheldonAI uses these answers to find essay angles that are genuinely surprising — the kind admissions officers remember. You are not being judged on how impressive these sound. The stranger and more honest, the more useful.
+              </p>
+            </div>
+          </div>
+        );
 
       default: return null;
     }
@@ -1666,7 +1669,7 @@ export default function ProfilePage() {
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
               <button onClick={() => saveSection(index)} disabled={sectionSaving}
                 style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 500, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, border: "none", borderRadius: 8, padding: "9px 22px", cursor: sectionSaving ? "not-allowed" : "pointer", opacity: sectionSaving ? 0.7 : 1, WebkitAppearance: "none", appearance: "none" }}>
-                {sectionSaving ? "Saving\u2026" : "Save changes"}
+                {sectionSaving ? "Saving\…" : "Save changes"}
               </button>
               <button
                 onClick={() => {
@@ -1745,7 +1748,7 @@ export default function ProfilePage() {
             {!analysis ? (
               <button onClick={analyzeProfile} disabled={analyzing}
                 style={{ fontSize: 14, fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 500, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, border: "none", borderRadius: 8, padding: "10px 24px", cursor: analyzing ? "not-allowed" : "pointer", opacity: analyzing ? 0.7 : 1, WebkitAppearance: "none", appearance: "none" }}>
-                {analyzing ? "Analyzing\u2026" : "Analyze My Profile"}
+                {analyzing ? "Analyzing\…" : "Analyze My Profile"}
               </button>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -1781,7 +1784,7 @@ export default function ProfilePage() {
                 </div>
                 <button onClick={analyzeProfile} disabled={analyzing}
                   style={{ fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: gold, backgroundColor: "transparent", border: `0.5px solid ${gold}`, borderRadius: 6, padding: "6px 16px", cursor: analyzing ? "not-allowed" : "pointer", opacity: analyzing ? 0.7 : 1, alignSelf: "flex-start", WebkitAppearance: "none", appearance: "none" }}>
-                  {analyzing ? "Analyzing\u2026" : "Re-analyze"}
+                  {analyzing ? "Analyzing\…" : "Re-analyze"}
                 </button>
               </div>
             )}
@@ -1847,7 +1850,7 @@ export default function ProfilePage() {
             <>
               <div style={{ position: "relative" }}>
                 {renderLabel("High school name")}
-                <input style={inputStyle} type="text" placeholder="Start typing\u2026" value={answers.high_school_name}
+                <input style={inputStyle} type="text" placeholder="Start typing\…" value={answers.high_school_name}
                   onChange={e => { setA("high_school_name", e.target.value); setHsOpen(true); }}
                   onFocus={() => { if (answers.high_school_name) setHsOpen(true); }}
                   onBlur={() => setTimeout(() => setHsOpen(false), 150)} />
@@ -1898,27 +1901,8 @@ export default function ProfilePage() {
           )}
 
           {/* Section 6: Who You Really Are */}
-          {sectionCard(5, "Who You Really Are",
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Private passion", fieldVal(answers.private_passion))}
-              {fieldRow("Unusual trait", fieldVal(answers.unusual_trait))}
-            </div>,
-            <>
-              <div>
-                {renderLabel("A passion almost no one knows about")}
-                <textarea style={{ ...textareaStyle, height: 100 }} maxLength={400} placeholder="Something private, unusual, or underrated..." value={answers.private_passion} onChange={e => setA("private_passion", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.private_passion.length}/400</div>
-              </div>
-              <div>
-                {renderLabel("The most unusual thing about you")}
-                <textarea style={{ ...textareaStyle, height: 100 }} maxLength={400} placeholder="A quirk or contradiction that surprises people..." value={answers.unusual_trait} onChange={e => setA("unusual_trait", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.unusual_trait.length}/400</div>
-              </div>
-            </>
-          )}
-
-          {/* Section 7: How You Think */}
-          {sectionCard(6, "How You Think",
+          {/* Section 6: How You Think */}
+          {sectionCard(5, "How You Think",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {fieldRow("Changed your mind", fieldVal(answers.changed_mind))}
               {fieldRow("Most meaningful creation", fieldVal(answers.meaningful_influence))}
@@ -1931,20 +1915,20 @@ export default function ProfilePage() {
                 <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.changed_mind.length}/500</div>
               </div>
               <div>
-                {renderLabel("Most meaningful thing you\u2019ve built or created")}
+                {renderLabel("Most meaningful thing you\'ve built or created")}
                 <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="A project, relationship, system, or creation..." value={answers.meaningful_influence} onChange={e => setA("meaningful_influence", e.target.value)} />
                 <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.meaningful_influence.length}/500</div>
               </div>
               <div>
-                {renderLabel("One world problem you\u2019d dedicate your life to solving")}
-                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="Be specific \u2014 not world peace..." value={answers.world_problem} onChange={e => setA("world_problem", e.target.value)} />
+                {renderLabel("One world problem you\'d dedicate your life to solving")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="Be specific \— not world peace..." value={answers.world_problem} onChange={e => setA("world_problem", e.target.value)} />
                 <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.world_problem.length}/500</div>
               </div>
             </>
           )}
 
-          {/* Section 8: Test Scores */}
-          {sectionCard(7, "Test Scores",
+          {/* Section 7: Test Scores */}
+          {sectionCard(6, "Test Scores",
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
               {fieldRow("SAT Math", fieldVal(answers.sat_math))}
               {fieldRow("SAT Reading/Writing", fieldVal(answers.sat_english))}
@@ -1957,21 +1941,20 @@ export default function ProfilePage() {
             </>
           )}
 
-          {/* Section 9: Location & Contact */}
-          {sectionCard(8, "Location & Contact",
+          {/* Section 8: Location & Contact */}
+          {sectionCard(7, "Location & Contact",
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
               {fieldRow("US Citizenship", fieldVal(answers.us_citizenship))}
               {answers.us_resident_state && fieldRow("US Resident State", fieldVal(answers.us_resident_state))}
               {fieldRow("Country", fieldVal(answers.country))}
-              {fieldRow("State / Region", fieldVal(answers.state))}
               {fieldRow("Phone", fieldVal(answers.phone))}
             </div>,
             <>
               <div>
                 {renderLabel("US citizenship or residency status")}
-                {renderPills("us_citizenship", ["US Citizen", "Permanent Resident (Green Card)", "DACA", "Visa Holder", "None of the above"])}
+                {renderPills("us_citizenship", ["US Citizen only", "Dual citizen", "Permanent Resident (Green Card)", "Visa Holder", "None of the above"])}
               </div>
-              {(answers.us_citizenship === "US Citizen" || answers.us_citizenship === "Permanent Resident (Green Card)" || answers.us_citizenship === "DACA") && (
+              {(answers.us_citizenship === "US Citizen only" || answers.us_citizenship === "Dual citizen" || answers.us_citizenship === "Permanent Resident (Green Card)") && (
                 <div>
                   {renderLabel("Which US state are you a resident of?")}
                   <select value={answers.us_resident_state} onChange={e => setA("us_resident_state", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
@@ -1998,36 +1981,12 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              <div style={{ position: "relative" }}>
-                {renderLabel("State / Region")}
-                {isUSA ? (
-                  <>
-                    <input style={inputStyle} type="text" placeholder="e.g. Massachusetts" value={answers.state}
-                      onChange={e => { setA("state", e.target.value); setStateOpen(true); }}
-                      onFocus={() => { if (answers.state) setStateOpen(true); }}
-                      onBlur={() => setTimeout(() => setStateOpen(false), 150)} />
-                    {stateOpen && stateSuggestions.length > 0 && (
-                      <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, backgroundColor: surface, borderStyle: "solid", borderWidth: "0.5px", borderColor: border, borderRadius: 8, boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 220, overflowY: "auto" }}>
-                        {stateSuggestions.map(st => (
-                          <button key={st} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setA("state", st); setStateOpen(false); }}
-                            style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, backgroundColor: "transparent", borderWidth: 0, fontFamily: "system-ui, -apple-system, sans-serif", cursor: "pointer" }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                          >{st}</button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <input style={inputStyle} type="text" placeholder="e.g. Ontario" value={answers.state} onChange={e => setA("state", e.target.value)} />
-                )}
-              </div>
               <div>{renderLabel("Phone number")}<input style={inputStyle} type="tel" placeholder="+1 (555) 000-0000" value={answers.phone} onChange={e => { const c = e.target.value.replace(/[^\d+\(\)\-\s]/g, ""); setA("phone", c); }} /></div>
             </>
           )}
 
-          {/* Section 10: College Preferences */}
-          {sectionCard(9, "College Preferences",
+          {/* Section 9: College Preferences */}
+          {sectionCard(8, "College Preferences",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {fieldRow("Campus Environment", fieldVal(answers.campus_environment))}
               {fieldRow("Campus Size", fieldVal(answers.campus_size))}
@@ -2050,8 +2009,8 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Section 11: Testing & Language */}
-          {sectionCard(10, "Testing & Language",
+          {/* Section 10: Testing & Language */}
+          {sectionCard(9, "Testing & Language",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {fieldRow("International Student", fieldVal(answers.is_international))}
               {answers.is_international === "Yes" && fieldRow("English Test", fieldVal(answers.english_test_type))}
@@ -2080,6 +2039,34 @@ export default function ProfilePage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Section 11: The Personal Stuff */}
+          {sectionCard(10, "The Personal Stuff",
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("Free Friday night", fieldVal(answers.friday_night))}
+              {fieldRow("Could talk about for hours", fieldVal(answers.obsession_topic))}
+              {fieldRow("Self-taught", fieldVal(answers.self_taught))}
+              {fieldRow("Common misconception", fieldVal(answers.common_misconception))}
+              {fieldRow("Embarrassing pride", fieldVal(answers.embarrassing_pride))}
+              {fieldRow("Guaranteed success problem", fieldVal(answers.guaranteed_success))}
+            </div>,
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {[
+                { label: "What do you do at 11pm on a free Friday?", field: "friday_night" as keyof Answers, placeholder: "e.g. I rewatch the same three documentary series...", max: 300 },
+                { label: "What could you talk about for three hours without preparing?", field: "obsession_topic" as keyof Answers, placeholder: "e.g. The geopolitics of water rights in Central Asia...", max: 300 },
+                { label: "What have you taught yourself that nobody asked you to learn?", field: "self_taught" as keyof Answers, placeholder: "e.g. I taught myself to read Ottoman Turkish...", max: 300 },
+                { label: "What do most people get completely wrong about something you know well?", field: "common_misconception" as keyof Answers, placeholder: "e.g. People think being good at math means being fast...", max: 300 },
+                { label: "What is the most embarrassing thing you are genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation...", max: 300 },
+                { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure...", max: 300 },
+              ].map(({ label, field, placeholder, max }) => (
+                <div key={field}>
+                  {renderLabel(label)}
+                  <textarea style={{ ...textareaStyle, height: 88 }} maxLength={max} placeholder={placeholder} value={answers[field] as string} onChange={e => setA(field, e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{(answers[field] as string).length}/{max}</div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -2313,7 +2300,7 @@ export default function ProfilePage() {
   const progressPct = (currentGroup + 1) / TOTAL_GROUPS * 100;
   const isValid     = isGroupValid(currentGroup);
   const isDisabled  = !isValid || transitioning;
-  const buttonText  = currentGroup === TOTAL_GROUPS - 1 ? "Complete my profile \u2192" : "Continue \u2192";
+  const buttonText  = currentGroup === TOTAL_GROUPS - 1 ? "Complete my profile →" : "Continue →";
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: bg, color: text, fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -2329,7 +2316,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 9 || currentGroup === 10) ? "80px 24px 40px" : "80px 24px 60px", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "80px 24px 40px" : "80px 24px 60px", width: "100%" }}>
         <div ref={groupRef} style={{ maxWidth: currentGroup === 4 ? 640 : 560, width: "100%", color: text }}>
 
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 500, color: text, textAlign: "center", marginBottom: 8, letterSpacing: "-0.2px", marginTop: 0 }}>
@@ -2341,14 +2328,19 @@ export default function ProfilePage() {
               List your activities in order of importance to you
             </p>
           )}
-          {currentGroup === 6 && (
+          {currentGroup === 5 && (
             <p style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, textAlign: "center", marginTop: -4, marginBottom: 28 }}>
               This helps us understand your intellectual curiosity and academic depth
             </p>
           )}
-          {currentGroup === 7 && (
+          {currentGroup === 6 && (
             <p style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, textAlign: "center", marginTop: -4, marginBottom: 28 }}>
-              These are optional \u2014 skip any you haven&apos;t taken
+              These are optional — skip any you haven&apos;t taken
+            </p>
+          )}
+          {currentGroup === 10 && (
+            <p style={{ fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: gold, textAlign: "center", marginTop: -4, marginBottom: 28, opacity: 0.85 }}>
+              These questions help SheldonAI understand you personally — not just academically.
             </p>
           )}
 
