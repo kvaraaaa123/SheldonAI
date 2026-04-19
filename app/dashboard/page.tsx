@@ -10,8 +10,6 @@ type ProfileData = {
   onboarding_complete: boolean;
 };
 
-type ActiveCard = "interviews" | null;
-
 export default function DashboardPage() {
   const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
@@ -24,17 +22,12 @@ export default function DashboardPage() {
   const muted   = isDark ? "rgba(250,250,245,0.45)" : "rgba(10,10,18,0.45)";
   const navBg   = isDark ? "rgba(8,8,16,0.95)" : "rgba(250,250,245,0.95)";
 
-  const [userEmail,      setUserEmail]      = useState("");
-  const [profileData,    setProfileData]    = useState<ProfileData | null>(null);
-  const [activeCard,     setActiveCard]     = useState<ActiveCard>(null);
+  const [userEmail,         setUserEmail]         = useState("");
+  const [profileData,       setProfileData]       = useState<ProfileData | null>(null);
   const [savedCollegeCount, setSavedCollegeCount] = useState(0);
-  const [essayCount,         setEssayCount]         = useState(0);
-  const [onboardingDismissed,setOnboardingDismissed] = useState(false);
+  const [essayCount,        setEssayCount]        = useState(0);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setOnboardingDismissed(localStorage.getItem("onboarding_dismissed") === "true");
-    }
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.push("/"); return; }
       const uid = data.session.user.id;
@@ -58,25 +51,22 @@ export default function DashboardPage() {
   const firstName = profileData?.full_name?.split(" ")[0] ?? "Scholar";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const profileIncomplete = !profileData || !profileData.onboarding_complete;
 
-  const comingSoon: Record<string, string> = {
-    interviews: "Coming soon — AI-powered mock interviews tailored to your target schools",
-  };
+  const dimTitle = isDark ? "rgba(250,250,245,0.35)" : "rgba(10,10,18,0.45)";
+  const dimDesc  = isDark ? "rgba(250,250,245,0.25)" : "rgba(10,10,18,0.3)";
+  const dimLink  = isDark ? "rgba(250,250,245,0.2)"  : "rgba(10,10,18,0.2)";
+  const dimIcon  = isDark ? "rgba(250,250,245,0.2)"  : "rgba(10,10,18,0.2)";
+  const dimIconBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
 
-  const CARDS = [
-    { id: "essays",       svgIcon: <QuillIcon color={gold} />,       label: "Essays",             desc: savedCollegeCount > 0 ? `Personal statements, supplements & Why Us essays · ${savedCollegeCount} schools in your list` : "Personal statements, supplements & Why Us essays", showDot: savedCollegeCount > 0, onClick: () => router.push("/annotate") },
-    { id: "colleges",     svgIcon: <GraduationCapIcon color={gold} />, label: "My Colleges",      desc: savedCollegeCount > 0 ? `Build your college list · ${savedCollegeCount} schools saved` : "Build your college list and get personalized matches", onClick: () => router.push("/colleges") },
-    { id: "profile",      svgIcon: <PersonIcon color={gold} />,      label: "Profile",            desc: "Build your student profile",                            showDot: profileIncomplete, onClick: () => router.push("/profile") },
-    { id: "activities",   svgIcon: <ChecklistIcon color={gold} />,   label: "Activities Advisor", desc: "Analyze and improve your activities list",              onClick: () => router.push("/activities") },
-    { id: "scholarships", svgIcon: <DollarCircleIcon color={gold} />,label: "Scholarships",       desc: "Find scholarships matched to your profile",             onClick: () => router.push("/scholarships") },
-    { id: "financial-aid",svgIcon: <DollarCircleIcon color={gold} />,label: "Financial Aid",      desc: "Estimate aid, navigate FAFSA, and appeal your offers",  onClick: () => router.push("/financial-aid") },
-    { id: "interviews",   svgIcon: <MicIcon color={gold} />,         label: "AI Interviews",      desc: "Practice college interviews with AI",                   onClick: () => setActiveCard(p => p === "interviews" ? null : "interviews") },
-    { id: "deadlines",    svgIcon: <CalendarIcon color={gold} />,    label: "Deadlines",          desc: "Track application deadlines, test dates, and essay milestones", onClick: () => router.push("/deadlines") },
-  ] as const;
+  void essayCount;
+  void savedCollegeCount;
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+
+      <style>{`
+        @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
 
       {/* Nav */}
       <nav style={{
@@ -106,241 +96,291 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* Body */}
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 28px" }}>
-      <style>{`@keyframes sheldon-onboarding-pulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}`}</style>
+      {/* Main body */}
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
 
-        {/* Hero */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: gold, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12 }}>
-            SheldonAI
-          </div>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, fontWeight: 500, letterSpacing: "-0.5px", marginBottom: 10, color: text, lineHeight: 1.1 }}>
-            {greeting}, {firstName}
-          </h1>
-          <p style={{ fontSize: 15, color: muted, marginBottom: 20 }}>Your college admissions command center.</p>
-          {profileIncomplete && (
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 10,
-              background: `${gold}12`, border: `0.5px solid ${gold}44`, borderRadius: 10,
-              padding: "10px 16px", cursor: "pointer",
-            }} onClick={() => router.push("/profile")}>
-              <div style={{ width: 120, height: 4, borderRadius: 2, background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", overflow: "hidden" }}>
-                <div style={{ width: "30%", height: "100%", background: gold, borderRadius: 2 }} />
-              </div>
-              <span style={{ fontSize: 12, color: gold }}>Complete your profile →</span>
+        {/* PART 1 — Greeting row */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 36 }}>
+          <div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 500, color: text, marginBottom: 5 }}>
+              {greeting}, {firstName}
             </div>
-          )}
-        </div>
-
-        {/* Quick stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 32 }}>
-          {[
-            { label: "Schools saved", value: savedCollegeCount, link: "/colleges" },
-            { label: "Profile", value: profileIncomplete ? "Incomplete" : "Complete", link: "/profile" },
-            { label: "Essays section", value: "Active", link: "/annotate" },
-          ].map(stat => (
-            <div key={stat.label}
-              onClick={() => router.push(stat.link)}
-              style={{
-                background: surface, border: `0.5px solid ${border}`, borderRadius: 12,
-                padding: "16px 20px", cursor: "pointer",
-              }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 500, color: gold, marginBottom: 4 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 12, color: muted }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Onboarding Banner */}
-        {!onboardingDismissed && (!profileData || !profileData.onboarding_complete) && (
-          <div style={{ border: `1.5px solid ${gold}`, borderRadius: 16, padding: "28px 32px", background: "rgba(154,112,64,0.05)", marginBottom: 32 }}>
-            {/* Top row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: gold, animation: "sheldon-onboarding-pulse 2s infinite", flexShrink: 0 }} />
-              <span style={{ fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, fontWeight: 500, fontFamily: "system-ui, sans-serif" }}>
-                Start here — get the most out of SheldonAI
-              </span>
-            </div>
-            {/* Title */}
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 500, color: text, margin: "0 0 10px" }}>
-              Your application package starts with your profile
-            </h2>
-            {/* Paragraph */}
-            <p style={{ fontSize: 14, color: muted, lineHeight: 1.75, margin: "0 0 24px", fontFamily: "system-ui, sans-serif" }}>
-              SheldonAI is most powerful when it knows who you are. Your profile, activities list, and essays work together as one package — each layer informing the next. Here is the exact sequence that gets the best results:
-            </p>
-            {/* Three steps */}
-            <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
-              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: "0.5px solid rgba(154,112,64,0.3)", background: "rgba(154,112,64,0.08)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: gold, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>① Profile first</div>
-                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>Build your complete profile — academics, background, activities, interests, and goals. This gives SheldonAI full context about who you are as a person and applicant.</div>
-              </div>
-              <div style={{ padding: "16px 12px", fontSize: 20, color: gold, flexShrink: 0, alignSelf: "center" }}>→</div>
-              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: `0.5px solid ${border}`, background: "transparent" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: muted, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>② Activities next</div>
-                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>Grade and rewrite your activities list. SheldonAI identifies your spike — your dominant theme — and flags which activities are strong enough to anchor an essay topic.</div>
-              </div>
-              <div style={{ padding: "16px 12px", fontSize: 20, color: muted, flexShrink: 0, alignSelf: "center" }}>→</div>
-              <div style={{ flex: 1, padding: 16, borderRadius: 10, border: `0.5px solid ${border}`, background: "transparent" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: muted, marginBottom: 6, fontFamily: "system-ui, sans-serif" }}>③ Essays last</div>
-                <div style={{ fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>With your profile and activities understood, SheldonAI gives truly personalized essay recommendations — knowing what to reveal that your activities list cannot show.</div>
-              </div>
-            </div>
-            {/* Info box */}
-            <div style={{ background: "rgba(154,112,64,0.04)", border: "0.5px solid rgba(154,112,64,0.25)", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
-              <div style={{ fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, fontWeight: 500, marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>Why this sequence matters</div>
-              <p style={{ fontSize: 13, color: muted, lineHeight: 1.7, margin: 0, fontFamily: "system-ui, sans-serif" }}>
-                Your essays should not repeat what admissions officers already read in your activities list. SheldonAI&apos;s job is to help you open new windows — revealing dimensions of your character that a 150-character description cannot capture. The profile and activities list teach SheldonAI who you are. The essays then show what that person is like on the inside.
-              </p>
-            </div>
-            {/* CTA button */}
-            <button onClick={() => router.push("/profile")} style={{ width: "100%", padding: "14px 0", fontSize: 15, fontFamily: "system-ui, sans-serif", fontWeight: 600, borderRadius: 10, border: `1px solid ${gold}`, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, cursor: "pointer", marginBottom: 12, display: "block" }}>
-              Start with your profile →
-            </button>
-            {/* Dismiss link */}
-            <div style={{ textAlign: "center" }}>
-              <button type="button" onClick={() => { localStorage.setItem("onboarding_dismissed", "true"); setOnboardingDismissed(true); }} style={{ background: "none", border: "none", color: muted, fontSize: 13, cursor: "pointer", textDecoration: "underline", fontFamily: "system-ui, sans-serif" }}>
-                Already done? Dismiss this
-              </button>
+            <div style={{ fontSize: 13, color: muted }}>
+              Your application package is waiting to be built
             </div>
           </div>
-        )}
-
-        {/* Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 36 }}>
-          {CARDS.map((card) => (
-            <CardButton
-              key={card.id}
-              svgIcon={card.svgIcon}
-              label={card.label}
-              desc={card.desc}
-              showDot={"showDot" in card ? card.showDot : false}
-              gold={gold} surface={surface} border={border} text={text} muted={muted}
-              onClick={card.onClick}
-            />
-          ))}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 7, marginBottom: 6 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: gold, animation: "dot-pulse 2s infinite", flexShrink: 0 }} />
+              <span style={{ fontSize: 10, textTransform: "uppercase", color: gold, letterSpacing: "0.1em" }}>Holistic application package</span>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: text, marginBottom: 4 }}>Four steps. One coherent story.</div>
+            <div style={{ fontSize: 12, color: muted, maxWidth: 300 }}>Follow this sequence for the most personalized experience</div>
+          </div>
         </div>
 
-        {/* Coming soon */}
-        {activeCard && (
-          <div style={{
-            background: surface, border: `0.5px solid ${border}`, borderRadius: 14,
-            padding: "24px 28px", fontSize: 14, color: muted, textAlign: "center", lineHeight: 1.6,
-          }}>
-            {comingSoon[activeCard]}
+        {/* PART 2 — Package strip */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)",
+          border: "1px solid rgba(154,112,64,0.25)", borderRadius: 14, overflow: "hidden",
+          marginBottom: 20, background: surface,
+        }}>
+          {/* Cell 1 — Profile */}
+          <div
+            onClick={() => router.push("/profile")}
+            style={{
+              padding: "18px 16px 20px", cursor: "pointer",
+              background: "rgba(154,112,64,0.06)",
+              borderRight: "0.5px solid rgba(154,112,64,0.2)",
+            }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: "50%", background: gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#fff" }}>1</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: text, marginTop: 10, marginBottom: 5 }}>Profile</div>
+            <div style={{ fontSize: 11, color: muted, lineHeight: 1.55 }}>Your academics, background, interests, and goals — the foundation everything is built on</div>
+            <div style={{ display: "inline-block", background: "rgba(154,112,64,0.12)", color: "#7a5230", fontSize: 10, padding: "3px 8px", borderRadius: 999, marginTop: 10 }}>● Start here</div>
           </div>
-        )}
+
+          {/* Cell 2 — Activities */}
+          <div
+            onClick={() => router.push("/activities")}
+            style={{ padding: "18px 16px 20px", cursor: "pointer", borderRight: `0.5px solid ${border}` }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "0.5px solid rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: muted }}>2</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginTop: 10, marginBottom: 5 }}>Activities</div>
+            <div style={{ fontSize: 11, color: dimDesc, lineHeight: 1.55 }}>Grade and rewrite your list. SheldonAI identifies your spike and essay potential</div>
+            <div style={{ display: "inline-block", background: "rgba(0,0,0,0.05)", color: "rgba(10,10,18,0.3)", fontSize: 10, padding: "3px 8px", borderRadius: 999, marginTop: 10 }}>After profile</div>
+          </div>
+
+          {/* Cell 3 — My Colleges */}
+          <div
+            onClick={() => router.push("/colleges")}
+            style={{ padding: "18px 16px 20px", cursor: "pointer", borderRight: `0.5px solid ${border}` }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "0.5px solid rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: muted }}>3</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginTop: 10, marginBottom: 5 }}>My colleges</div>
+            <div style={{ fontSize: 11, color: dimDesc, lineHeight: 1.55 }}>Get matched to universities and research each school&apos;s specific essay requirements</div>
+            <div style={{ display: "inline-block", background: "rgba(0,0,0,0.05)", color: "rgba(10,10,18,0.3)", fontSize: 10, padding: "3px 8px", borderRadius: 999, marginTop: 10 }}>After activities</div>
+          </div>
+
+          {/* Cell 4 — Essays */}
+          <div
+            onClick={() => router.push("/annotate")}
+            style={{ padding: "18px 16px 20px", cursor: "pointer" }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "0.5px solid rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: muted }}>4</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginTop: 10, marginBottom: 5 }}>Essays</div>
+            <div style={{ fontSize: 11, color: dimDesc, lineHeight: 1.55 }}>With your profile and activities known, every essay recommendation is truly yours</div>
+            <div style={{ display: "inline-block", background: "rgba(0,0,0,0.05)", color: "rgba(10,10,18,0.3)", fontSize: 10, padding: "3px 8px", borderRadius: 999, marginTop: 10 }}>After colleges</div>
+          </div>
+        </div>
+
+        {/* PART 3 — Insight bar */}
+        <div style={{
+          border: "0.5px solid rgba(154,112,64,0.2)", borderRadius: 10,
+          padding: "13px 16px", marginBottom: 28,
+          background: "rgba(154,112,64,0.02)",
+          display: "flex", alignItems: "flex-start", gap: 10,
+        }}>
+          <div style={{ width: 2, background: "#9a7040", opacity: 0.5, borderRadius: 1, alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ fontSize: 12, lineHeight: 1.65, color: muted }}>
+            Your essays should{" "}
+            <span style={{ color: "#7a5230", fontWeight: 500 }}>reveal what your activities list cannot show.</span>
+            {" "}SheldonAI uses your profile and activities to ensure every essay opens a new window — not repeats what admissions officers already read.
+          </div>
+        </div>
+
+        {/* PART 4 — Main 4 cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 24 }}>
+
+          {/* Card 1 — Profile */}
+          <MainCard
+            onClick={() => router.push("/profile")}
+            borderStyle="1px solid rgba(154,112,64,0.4)"
+            surface={surface}
+            border={border}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(154,112,64,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: text, marginBottom: 5 }}>Profile</div>
+            <div style={{ fontSize: 12, color: muted, lineHeight: 1.55, flex: 1 }}>Build your complete student profile — academics, background, passions, and more</div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `0.5px solid ${border}`, fontSize: 11, fontWeight: 500, color: gold }}>Start here →</div>
+          </MainCard>
+
+          {/* Card 2 — Activities */}
+          <MainCard onClick={() => router.push("/activities")} borderStyle={`0.5px solid ${border}`} surface={surface} border={border}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: dimIconBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={dimIcon} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 11 12 14 22 4"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginBottom: 5 }}>Activities advisor</div>
+            <div style={{ fontSize: 12, color: dimDesc, lineHeight: 1.55, flex: 1 }}>Grade and rewrite your activities list with real admissions logic</div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `0.5px solid ${border}`, fontSize: 11, fontWeight: 500, color: dimLink }}>Step 2 →</div>
+          </MainCard>
+
+          {/* Card 3 — My Colleges */}
+          <MainCard onClick={() => router.push("/colleges")} borderStyle={`0.5px solid ${border}`} surface={surface} border={border}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: dimIconBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={dimIcon} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginBottom: 5 }}>My colleges</div>
+            <div style={{ fontSize: 12, color: dimDesc, lineHeight: 1.55, flex: 1 }}>Get matched to universities and research their specific essays</div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `0.5px solid ${border}`, fontSize: 11, fontWeight: 500, color: dimLink }}>Step 3 →</div>
+          </MainCard>
+
+          {/* Card 4 — Essays */}
+          <MainCard onClick={() => router.push("/annotate")} borderStyle={`0.5px solid ${border}`} surface={surface} border={border}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: dimIconBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={dimIcon} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: dimTitle, marginBottom: 5 }}>Essays</div>
+            <div style={{ fontSize: 12, color: dimDesc, lineHeight: 1.55, flex: 1 }}>Analyze your essays line by line with personalized, packaged feedback</div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `0.5px solid ${border}`, fontSize: 11, fontWeight: 500, color: dimLink }}>Step 4 →</div>
+          </MainCard>
+
+        </div>
+
+        {/* PART 5 — Divider */}
+        <div style={{ height: "0.5px", background: "rgba(0,0,0,0.07)", margin: "8px 0 20px" }} />
+
+        {/* PART 6 — Bottom 4 tool cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+
+          {/* Financial Aid */}
+          <ToolCard onClick={() => router.push("/financial-aid")} surface={surface} border={border}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(22,163,74,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: text, marginBottom: 3 }}>Financial aid</div>
+              <div style={{ fontSize: 11, color: muted, lineHeight: 1.5 }}>FAFSA, CSS Profile, net price estimator, appeal letters</div>
+            </div>
+          </ToolCard>
+
+          {/* Scholarships */}
+          <ToolCard onClick={() => router.push("/scholarships")} surface={surface} border={border}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(37,99,235,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: text, marginBottom: 3 }}>Scholarships</div>
+              <div style={{ fontSize: 11, color: muted, lineHeight: 1.5 }}>70+ awards matched to your profile and background</div>
+            </div>
+          </ToolCard>
+
+          {/* Deadlines */}
+          <ToolCard onClick={() => router.push("/deadlines")} surface={surface} border={border}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(220,38,38,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: text, marginBottom: 3 }}>Deadlines</div>
+              <div style={{ fontSize: 11, color: muted, lineHeight: 1.5 }}>Application dates, test dates, essay milestones</div>
+            </div>
+          </ToolCard>
+
+          {/* AI Interviews */}
+          <ToolCard onClick={() => router.push("/interviews")} surface={surface} border={border}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(124,58,237,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: text, marginBottom: 3 }}>AI interviews</div>
+              <div style={{ fontSize: 11, color: muted, lineHeight: 1.5 }}>Practice with Harvard, Yale, Stanford alumni — voice mode</div>
+            </div>
+          </ToolCard>
+
+        </div>
 
       </div>
     </div>
   );
 }
 
-function CardButton({ svgIcon, label, desc, showDot, gold, surface, border, text, muted, onClick }: {
-  svgIcon: React.ReactNode; label: string; desc: string; showDot: boolean;
-  gold: string; surface: string; border: string; text: string; muted: string;
+function MainCard({ children, onClick, borderStyle, surface, border }: {
+  children: React.ReactNode;
   onClick: () => void;
+  borderStyle: string;
+  surface: string;
+  border: string;
 }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <button
+    <div
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-start",
-        width: "100%", minHeight: 160, padding: "24px",
+        padding: 20,
+        border: hovered ? "0.5px solid rgba(154,112,64,0.4)" : borderStyle,
+        borderRadius: 14,
         background: surface,
-        border: `0.5px solid ${hovered ? gold : border}`,
-        borderRadius: 16, cursor: "pointer", textAlign: "left",
-        transition: "border-color 0.18s, box-shadow 0.18s, transform 0.18s",
-        boxShadow: hovered ? `0 4px 20px ${gold}18` : "none",
-        transform: hovered ? "translateY(-2px)" : "none",
+        cursor: "pointer",
+        transition: "all 0.15s",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 160,
+        transform: hovered ? "translateY(-1px)" : "none",
       }}
     >
-      {showDot && (
-        <span style={{
-          position: "absolute", top: 14, right: 14,
-          width: 8, height: 8, borderRadius: "50%", background: gold,
-        }} />
-      )}
-      <span style={{ marginBottom: 14 }}>{svgIcon}</span>
-      <span style={{ fontSize: 17, fontWeight: 600, color: text, marginBottom: 6 }}>{label}</span>
-      <span style={{ fontSize: 13, color: muted, lineHeight: 1.5 }}>{desc}</span>
-    </button>
+      {children}
+    </div>
   );
 }
 
-// ── SVG Icons ─────────────────────────────────────────────────────────────────
-function QuillIcon({ color }: { color: string }) {
+function ToolCard({ children, onClick, surface, border }: {
+  children: React.ReactNode;
+  onClick: () => void;
+  surface: string;
+  border: string;
+}) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 2C17 2 13 4 11 8L7 18L9 20L19 16C23 14 24 10 22 7" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M11 8L9 20" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M4 20L7 17" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function GraduationCapIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 3L2 8L12 13L22 8L12 3Z" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
-      <path d="M6 10.5V16C6 16 8 19 12 19C16 19 18 16 18 16V10.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M22 8V14" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function PersonIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="7" r="4" stroke={color} strokeWidth="1.5"/>
-      <path d="M4 21C4 17 7.6 14 12 14C16.4 14 20 17 20 21" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function ChecklistIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M9 5H7C5.9 5 5 5.9 5 7V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V7C19 5.9 18.1 5 17 5H15" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M9 5C9 3.9 9.9 3 11 3H13C14.1 3 15 3.9 15 5V6H9V5Z" stroke={color} strokeWidth="1.5"/>
-      <path d="M9 12L11 14L15 10" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function DollarCircleIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5"/>
-      <path d="M12 7V17M9.5 9.5C9.5 8.4 10.6 7.5 12 7.5C13.4 7.5 14.5 8.4 14.5 9.5C14.5 10.6 13.4 11.5 12 11.5C10.6 11.5 9.5 12.4 9.5 13.5C9.5 14.6 10.6 15.5 12 15.5C13.4 15.5 14.5 14.6 14.5 13.5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function MicIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="9" y="2" width="6" height="11" rx="3" stroke={color} strokeWidth="1.5"/>
-      <path d="M5 10C5 14.4 8.1 18 12 18C15.9 18 19 14.4 19 10" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M12 18V22M9 22H15" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
-function CalendarIcon({ color }: { color: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="3" y="4" width="18" height="17" rx="2" stroke={color} strokeWidth="1.5"/>
-      <path d="M3 9H21" stroke={color} strokeWidth="1.5"/>
-      <path d="M8 2V5M16 2V5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      <rect x="7" y="12" width="3" height="3" rx="0.5" fill={color}/>
-      <rect x="14" y="12" width="3" height="3" rx="0.5" fill={color}/>
-    </svg>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: 16,
+        border: `0.5px solid ${hovered ? "rgba(0,0,0,0.18)" : border}`,
+        borderRadius: 12,
+        background: surface,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        transition: "border-color 0.15s",
+      }}
+    >
+      {children}
+    </div>
   );
 }
