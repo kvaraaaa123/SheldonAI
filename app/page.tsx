@@ -199,17 +199,17 @@ function Landing() {
 
           {/* Flow diagram */}
           <div style={{ display: "flex", alignItems: "center", marginBottom: "3.5rem", overflowX: "auto", paddingBottom: 8 }}>
-            {["Profile", "Activities", "Essays", "One perfect package"].map((node, i) => (
+            {["Profile", "Activities", "My Colleges", "Essays", "One perfect package"].map((node, i) => (
               <div key={node} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <div style={{
-                  padding: "14px 22px", borderRadius: 10, fontSize: 14, fontWeight: i === 3 ? 600 : 400, fontFamily: "system-ui,sans-serif",
-                  background: i === 3 ? "rgba(201,169,110,0.14)" : "rgba(250,250,245,0.06)",
-                  border: `1px solid ${i === 3 ? "rgba(201,169,110,0.40)" : "rgba(250,250,245,0.10)"}`,
-                  color: i === 3 ? goldLt : darkTx,
+                  padding: "14px 22px", borderRadius: 10, fontSize: 14, fontWeight: i === 4 ? 600 : 400, fontFamily: "system-ui,sans-serif",
+                  background: i === 4 ? "rgba(201,169,110,0.14)" : "rgba(250,250,245,0.06)",
+                  border: `1px solid ${i === 4 ? "rgba(201,169,110,0.40)" : "rgba(250,250,245,0.10)"}`,
+                  color: i === 4 ? goldLt : darkTx,
                 }}>
                   {node}
                 </div>
-                {i < 3 && (
+                {i < 4 && (
                   <div style={{ width: 36, height: 1, background: "rgba(250,250,245,0.15)", margin: "0 4px", flexShrink: 0, position: "relative" }}>
                     <span style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", color: "rgba(250,250,245,0.25)", fontSize: 12 }}>›</span>
                   </div>
