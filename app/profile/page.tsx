@@ -777,95 +777,108 @@ export default function ProfilePage() {
 
   async function handleComplete() {
     console.log("Completing profile...");
+    const sessionResult = await supabase.auth.getSession();
+    const uid = sessionResult.data.session?.user?.id;
+    if (!uid) { console.error("No user id for upsert"); return; }
+
     const cleanActivities = activities.filter(a => !!a.activity_type);
-    const formData = {
+
+    const safeProfileData: Record<string, unknown> = {
+      user_id: uid,
+      updated_at: new Date().toISOString(),
+      onboarding_complete: true,
+      // Basic info
       full_name: answers.full_name || null,
-      birthday: answers.birthday || null,
-      gender: answers.gender || null,
-      ethnicity: answers.ethnicity || null,
-      ethnicity_other: answers.ethnicity_other || null,
-      religion: answers.religion || null,
-      religion_other: answers.religion_other || null,
-      ability_to_pay: answers.ability_to_pay || null,
       education_status: answers.education_status || null,
       graduation_year: answers.graduation_year || null,
       start_semester: answers.start_semester || null,
       high_school_name: answers.high_school_name || null,
       gpa: answers.gpa ? parseFloat(answers.gpa) : null,
       class_rank: answers.class_rank || null,
-      sat_math: answers.sat_math ? parseInt(answers.sat_math) : null,
-      sat_english: answers.sat_english ? parseInt(answers.sat_english) : null,
-      act: answers.act ? parseInt(answers.act) : null,
-      country: answers.country || null,
-      state: answers.state || null,
-      phone: answers.phone || null,
-      hobbies: answers.hobbies.length > 0 ? answers.hobbies : null,
+      // Academics
       passion_description: answers.passion_description || null,
-      has_research: answers.has_research || null,
-      research_subject: answers.research_subject || null,
-      research_description: answers.research_description || null,
-      research_awards: answers.research_awards || null,
-      activities: cleanActivities.length > 0 ? cleanActivities : null,
-      campus_environment: answers.campus_environment || null,
-      campus_size: answers.campus_size || null,
-      school_type: answers.school_type || null,
-      distance_preference: answers.distance_preference || null,
-      social_culture: answers.social_culture || null,
-      academic_intensity: answers.academic_intensity || null,
-      climate_preference: answers.climate_preference || null,
-      financial_aid_need: answers.financial_aid_need || null,
-      is_international: answers.is_international || null,
-      english_test_type: answers.english_test_type || null,
-      english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
-      private_passion: answers.private_passion || null,
-      unusual_trait: answers.unusual_trait || null,
-      changed_mind: answers.changed_mind || null,
-      meaningful_influence: answers.meaningful_influence || null,
-      world_problem: answers.world_problem || null,
-      us_citizenship: answers.us_citizenship || null,
-      us_resident_state: answers.us_resident_state || null,
-      friday_night: answers.friday_night || null,
-      obsession_topic: answers.obsession_topic || null,
-      self_taught: answers.self_taught || null,
-      common_misconception: answers.common_misconception || null,
-      embarrassing_pride: answers.embarrassing_pride || null,
-      guaranteed_success: answers.guaranteed_success || null,
-      second_citizenship_country: answers.second_citizenship_country || null,
-      unique_personal_trait: answers.unique_personal_trait || null,
-      anything_else: answers.anything_else || null,
+      hobbies: answers.hobbies.length > 0 ? answers.hobbies : null,
+      why_this_major: answers.why_this_major || null,
+      career_goals: answers.career_goals || null,
+      essay_topics: answers.essay_topics || null,
+      // Testing
+      sat_math: answers.sat_math ? parseInt(answers.sat_math) : null,
       sat_reading: answers.sat_reading ? parseInt(answers.sat_reading) : null,
       sat_score: (answers.sat_math && answers.sat_reading)
         ? parseInt(answers.sat_math) + parseInt(answers.sat_reading)
         : null,
       act_score: answers.act_score ? parseInt(answers.act_score) : null,
       other_test_scores: otherTestScores.length > 0 ? JSON.stringify(otherTestScores) : null,
-      why_this_major: answers.why_this_major || null,
-      career_goals: answers.career_goals || null,
-      family_income_bracket: answers.family_income_bracket || null,
+      english_test_type: answers.english_test_type || null,
+      english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+      is_international: answers.us_citizenship === "Not a US citizen" ? "Yes" : "No",
+      // Background
+      us_citizenship: answers.us_citizenship || null,
+      us_resident_state: answers.us_resident_state || null,
+      country: answers.country || null,
+      second_citizenship_country: answers.second_citizenship_country || null,
+      phone: answers.phone || null,
       first_gen: answers.first_gen || null,
+      // College preferences
+      school_type: answers.school_type || null,
+      campus_environment: answers.campus_environment || null,
+      campus_size: answers.campus_size || null,
+      social_culture: answers.social_culture || null,
+      financial_aid_need: answers.financial_aid_need || null,
+      distance_preference: answers.distance_preference || null,
+      climate_preference: answers.climate_preference || null,
+      // Financial
+      family_income_bracket: answers.family_income_bracket || null,
       css_profile_aware: answers.css_profile_aware || null,
-      essay_topics: answers.essay_topics || null,
+      ability_to_pay: answers.ability_to_pay || null,
+      // Personality — step 9 section A
+      private_passion: answers.private_passion || null,
+      unusual_trait: answers.unusual_trait || null,
+      changed_mind: answers.changed_mind || null,
+      meaningful_influence: answers.meaningful_influence || null,
+      // Optional section B
+      embarrassing_pride: answers.embarrassing_pride || null,
+      guaranteed_success: answers.guaranteed_success || null,
+      unique_personal_trait: answers.unique_personal_trait || null,
+      anything_else: answers.anything_else || null,
+      // Legacy optional fields
+      friday_night: answers.friday_night || null,
+      obsession_topic: answers.obsession_topic || null,
+      self_taught: answers.self_taught || null,
+      common_misconception: answers.common_misconception || null,
+      // Activities
+      activities: cleanActivities.length > 0 ? cleanActivities : null,
     };
 
-    const sessionResult = await supabase.auth.getSession();
-    const uid = sessionResult.data.session?.user?.id;
-    if (!uid) { console.error("No user id for upsert"); return; }
+    const trySave = async (data: Record<string, unknown>): Promise<{ success: boolean; error?: { message: string } }> => {
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(data, { onConflict: "user_id" });
 
-    const { error: upsertError } = await supabase
-      .from("profiles")
-      .upsert(
-        { user_id: uid, ...formData, onboarding_complete: true, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" }
-      );
+      if (!error) return { success: true };
 
-    console.log("Upsert result:", upsertError);
+      if (error.message && error.message.includes("column")) {
+        const match = error.message.match(/find the '(\w+)' column/);
+        if (match) {
+          const badColumn = match[1];
+          console.warn(`Column '${badColumn}' not found in schema, removing and retrying`);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [badColumn]: _removed, ...cleanedData } = data;
+          return trySave(cleanedData);
+        }
+      }
 
-    if (!upsertError) {
+      return { success: false, error };
+    };
+
+    const result = await trySave(safeProfileData);
+
+    if (result.success) {
       setSaveError("");
       router.push("/dashboard");
     } else {
-      console.error("Save error:", upsertError);
-      setSaveError("Profile saved partially — some fields may not have saved. You can continue.");
+      console.error("Final save error:", result.error);
+      setSaveError("Could not save your profile. Please check your connection and try again.");
     }
   }
 
@@ -1797,6 +1810,19 @@ export default function ProfilePage() {
       case 8:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            {/* Optional banner — FIRST */}
+            <div style={{ border: "1px solid rgba(154,112,64,0.3)", background: "rgba(154,112,64,0.04)", borderRadius: 14, padding: "20px 24px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                <span style={{ color: gold, fontSize: 20, lineHeight: 1.2, marginTop: 2, flexShrink: 0 }}>✦</span>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: gold, marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>Optional — but worth it</div>
+                  <div style={{ fontSize: 13, color: muted, lineHeight: 1.7, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    Everything below is completely optional. These questions help SheldonAI understand the real you — not just your grades and clubs. Your answers are used to generate essay angles, make your application feel human, and surface the kind of details admissions officers actually remember. Answer none, one, or all. Even one honest answer makes a difference. There are no wrong answers here.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Section A */}
             {[
               { label: "What do you do when nobody is watching?", field: "private_passion" as keyof Answers, placeholder: "e.g. I rewrite Wikipedia articles I think are wrong. I make elaborate playlists for moods that don't have names...", max: 300 },
@@ -1814,19 +1840,8 @@ export default function ProfilePage() {
               </div>
             ))}
 
-            {/* Section B — Optional */}
+            {/* Section B — Optional questions */}
             <div style={{ borderTop: `1px solid ${border}`, paddingTop: 32, marginTop: 8 }}>
-              <div style={{ border: "1px solid rgba(154,112,64,0.3)", background: "rgba(154,112,64,0.04)", borderRadius: 14, padding: "20px 24px", marginBottom: 28 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                  <span style={{ color: gold, fontSize: 20, lineHeight: 1.2, marginTop: 2, flexShrink: 0 }}>✦</span>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: gold, marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>Optional — but worth it</div>
-                    <div style={{ fontSize: 13, color: muted, lineHeight: 1.7, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                      Everything below is completely optional. These questions help SheldonAI understand the real you — not just your grades and clubs. Your answers are used to generate essay angles, make your application feel human, and surface the kind of details admissions officers actually remember. Answer none, one, or all. Even one honest answer makes a difference. There are no wrong answers here.
-                    </div>
-                  </div>
-                </div>
-              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
                 <div>
                   {renderLabel("What's the most embarrassing thing you're genuinely proud of?")}
@@ -3161,7 +3176,7 @@ export default function ProfilePage() {
           {renderGroupContent()}
 
           {saveError && (
-            <div style={{ marginTop: 24, border: "1px solid rgba(220,38,38,0.4)", borderRadius: 10, padding: "12px 16px", background: "rgba(220,38,38,0.05)", fontSize: 13, color: isDark ? "#f87171" : "#b91c1c", fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.5 }}>
+            <div style={{ marginTop: 16, border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: "12px 16px", background: "rgba(220,38,38,0.04)", fontSize: 13, color: "#dc2626", fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.5 }}>
               {saveError}
             </div>
           )}
