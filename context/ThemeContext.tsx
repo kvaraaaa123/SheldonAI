@@ -10,16 +10,16 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
-  isDark: true,
+  isDark: false,
   toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    setIsDark(stored !== "light");
+    setIsDark(stored === "dark");
   }, []);
 
   function toggleTheme() {
