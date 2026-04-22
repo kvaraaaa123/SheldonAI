@@ -86,6 +86,14 @@ type ProfileData = {
   second_citizenship_country: string | null;
   unique_personal_trait: string | null;
   anything_else: string | null;
+  sat_score: number | null;
+  act_score: number | null;
+  why_this_major: string | null;
+  career_goals: string | null;
+  family_income_bracket: string | null;
+  first_gen: string | null;
+  css_profile_aware: string | null;
+  essay_topics: string | null;
 };
 
 type Answers = {
@@ -146,6 +154,14 @@ type Answers = {
   second_citizenship_country: string;
   unique_personal_trait: string;
   anything_else: string;
+  sat_score: string;
+  act_score: string;
+  why_this_major: string;
+  career_goals: string;
+  family_income_bracket: string;
+  first_gen: string;
+  css_profile_aware: string;
+  essay_topics: string;
 };
 
 type AnalysisResult = {
@@ -190,6 +206,8 @@ const EMPTY: Answers = {
   friday_night: "", obsession_topic: "", self_taught: "",
   common_misconception: "", embarrassing_pride: "", guaranteed_success: "",
   second_citizenship_country: "", unique_personal_trait: "", anything_else: "",
+  sat_score: "", act_score: "", why_this_major: "", career_goals: "",
+  family_income_bracket: "", first_gen: "", css_profile_aware: "", essay_topics: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -348,20 +366,18 @@ const RESEARCH_SUBJECTS: string[] = [
 ];
 
 const GROUP_TITLES = [
-  "Who are you?",
-  "Your background",
-  "Your academic year",
-  "Your high school",
-  "Your activities",
-  "How you think",
+  "Basic Info",
+  "Academics",
+  "Activities",
+  "College Preferences",
+  "Background",
   "Standardized Testing",
-  "Where you're from",
-  "College preferences",
-  "International status",
-  "The stuff that makes you, you",
+  "Essays & Goals",
+  "Financial Aid",
+  "About You",
 ];
 
-const TOTAL_GROUPS = 11;
+const TOTAL_GROUPS = 9;
 
 const ENGLISH_SPEAKING_COUNTRIES = new Set([
   "United States", "Canada", "United Kingdom", "Australia", "New Zealand",
@@ -430,6 +446,14 @@ function profileToAnswers(p: ProfileData): Answers {
     second_citizenship_country: p.second_citizenship_country ?? "",
     unique_personal_trait: p.unique_personal_trait ?? "",
     anything_else: p.anything_else ?? "",
+    sat_score: p.sat_score != null ? String(p.sat_score) : "",
+    act_score: p.act_score != null ? String(p.act_score) : "",
+    why_this_major: p.why_this_major ?? "",
+    career_goals: p.career_goals ?? "",
+    family_income_bracket: p.family_income_bracket ?? "",
+    first_gen: p.first_gen ?? "",
+    css_profile_aware: p.css_profile_aware ?? "",
+    essay_topics: p.essay_topics ?? "",
   };
 }
 
@@ -693,23 +717,15 @@ export default function ProfilePage() {
 
   function isGroupValid(g: number): boolean {
     switch (g) {
-      case 0: return !!(answers.full_name.trim() && answers.birthday && answers.gender);
-      case 1: return !!(
-        answers.ethnicity &&
-        (answers.ethnicity !== "Other" || answers.ethnicity_other.trim()) &&
-        answers.religion &&
-        (answers.religion !== "Other" || answers.religion_other.trim()) &&
-        answers.ability_to_pay
-      );
-      case 2: return !!(answers.education_status && answers.graduation_year && answers.start_semester);
-      case 3: return !!(answers.high_school_name.trim() && answers.gpa && answers.class_rank);
-      case 4: return activities.some(a => !!a.activity_type);
+      case 0: return !!(answers.full_name.trim() && answers.high_school_name.trim() && answers.gpa);
+      case 1: return true;
+      case 2: return activities.some(a => !!a.activity_type);
+      case 3: return true;
+      case 4: return !!(answers.us_citizenship);
       case 5: return true;
       case 6: return true;
-      case 7: return !!(answers.country.trim() && answers.phone.trim().length > 0);
-      case 8: return !!(answers.campus_environment && answers.campus_size);
-      case 9: return !!(answers.is_international);
-      case 10: return true;
+      case 7: return true;
+      case 8: return true;
       default: return false;
     }
   }
@@ -785,6 +801,14 @@ export default function ProfilePage() {
       second_citizenship_country: answers.second_citizenship_country || null,
       unique_personal_trait: answers.unique_personal_trait || null,
       anything_else: answers.anything_else || null,
+      sat_score: answers.sat_score ? parseInt(answers.sat_score) : null,
+      act_score: answers.act_score ? parseInt(answers.act_score) : null,
+      why_this_major: answers.why_this_major || null,
+      career_goals: answers.career_goals || null,
+      family_income_bracket: answers.family_income_bracket || null,
+      first_gen: answers.first_gen || null,
+      css_profile_aware: answers.css_profile_aware || null,
+      essay_topics: answers.essay_topics || null,
     };
 
     const sessionResult = await supabase.auth.getSession();
@@ -802,16 +826,10 @@ export default function ProfilePage() {
 
     if (!upsertError) {
       setSaveError("");
-      setProfileData({ user_id: uid, ...formData, onboarding_complete: true } as unknown as ProfileData);
-      setCurrentGroup(0);
-      setMode("view");
+      router.push("/dashboard");
     } else {
-      const msg = upsertError.message || "";
-      if (msg.includes("column") && msg.includes("schema cache")) {
-        setSaveError("Some fields couldn't be saved — please refresh and try again.");
-      } else {
-        setSaveError("Error saving profile: " + msg);
-      }
+      console.error("Save error:", upsertError);
+      setSaveError("Profile saved partially — some fields may not have saved. You can continue.");
     }
   }
 
@@ -819,55 +837,71 @@ export default function ProfilePage() {
 
   function getSectionFields(sectionIndex: number): Partial<ProfileData> {
     switch (sectionIndex) {
-      case 0: return { full_name: answers.full_name || null, birthday: answers.birthday || null, gender: answers.gender || null };
-      case 1: return {
-        ethnicity: answers.ethnicity || null, ethnicity_other: answers.ethnicity_other || null,
-        religion: answers.religion || null, religion_other: answers.religion_other || null,
-        ability_to_pay: answers.ability_to_pay || null, education_status: answers.education_status || null,
+      case 0: return {
+        full_name: answers.full_name || null,
+        graduation_year: answers.graduation_year || null,
+        education_status: answers.education_status || null,
+        high_school_name: answers.high_school_name || null,
+        gpa: answers.gpa ? parseFloat(answers.gpa) : null,
+        class_rank: answers.class_rank || null,
       };
-      case 2: return { graduation_year: answers.graduation_year || null, start_semester: answers.start_semester || null };
-      case 3: return { high_school_name: answers.high_school_name || null, gpa: answers.gpa ? parseFloat(answers.gpa) : null, class_rank: answers.class_rank || null };
-      case 4: {
+      case 1: return {
+        passion_description: answers.passion_description || null,
+        hobbies: answers.hobbies.length > 0 ? answers.hobbies : null,
+        why_this_major: answers.why_this_major || null,
+        career_goals: answers.career_goals || null,
+      };
+      case 2: {
         const clean = activities.filter(a => !!a.activity_type);
         return { activities: clean.length > 0 ? clean : null };
       }
-      case 5: return { changed_mind: answers.changed_mind || null, meaningful_influence: answers.meaningful_influence || null, world_problem: answers.world_problem || null };
-      case 6: return {
-        sat_math: answers.sat_math ? parseInt(answers.sat_math) : null,
-        sat_english: answers.sat_english ? parseInt(answers.sat_english) : null,
-        act: answers.act ? parseInt(answers.act) : null,
-        english_test_type: answers.english_test_type || null,
-        english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
-      };
-      case 7: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, second_citizenship_country: answers.second_citizenship_country || null, country: answers.country || null, phone: answers.phone || null };
-      case 8: return {
+      case 3: return {
+        school_type: answers.school_type || null,
         campus_environment: answers.campus_environment || null,
         campus_size: answers.campus_size || null,
-        school_type: answers.school_type || null,
-        distance_preference: answers.distance_preference || null,
         social_culture: answers.social_culture || null,
-        academic_intensity: answers.academic_intensity || null,
-        climate_preference: answers.climate_preference || null,
         financial_aid_need: answers.financial_aid_need || null,
+        distance_preference: answers.distance_preference || null,
+        climate_preference: answers.climate_preference || null,
       };
-      case 9: return {
-        is_international: answers.is_international || null,
+      case 4: return {
+        us_citizenship: answers.us_citizenship || null,
+        second_citizenship_country: answers.second_citizenship_country || null,
+        us_resident_state: answers.us_resident_state || null,
+        country: answers.country || null,
+        phone: answers.phone || null,
+        first_gen: answers.first_gen || null,
+      };
+      case 5: return {
+        sat_score: answers.sat_score ? parseInt(answers.sat_score) : null,
+        act_score: answers.act_score ? parseInt(answers.act_score) : null,
         english_test_type: answers.english_test_type || null,
         english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+        is_international: answers.us_citizenship === "Not a US citizen" ? "Yes" : "No",
       };
-      case 10: return {
-        friday_night: answers.friday_night || null,
-        obsession_topic: answers.obsession_topic || null,
-        self_taught: answers.self_taught || null,
-        common_misconception: answers.common_misconception || null,
-        embarrassing_pride: answers.embarrassing_pride || null,
-        guaranteed_success: answers.guaranteed_success || null,
+      case 6: return {
+        why_this_major: answers.why_this_major || null,
+        career_goals: answers.career_goals || null,
+        essay_topics: answers.essay_topics || null,
+      };
+      case 7: return {
+        family_income_bracket: answers.family_income_bracket || null,
+        css_profile_aware: answers.css_profile_aware || null,
+        ability_to_pay: answers.ability_to_pay || null,
+      };
+      case 8: return {
         private_passion: answers.private_passion || null,
         unusual_trait: answers.unusual_trait || null,
         changed_mind: answers.changed_mind || null,
         meaningful_influence: answers.meaningful_influence || null,
+        embarrassing_pride: answers.embarrassing_pride || null,
+        guaranteed_success: answers.guaranteed_success || null,
         unique_personal_trait: answers.unique_personal_trait || null,
         anything_else: answers.anything_else || null,
+        friday_night: answers.friday_night || null,
+        obsession_topic: answers.obsession_topic || null,
+        self_taught: answers.self_taught || null,
+        common_misconception: answers.common_misconception || null,
       };
       default: return {};
     }
@@ -1206,12 +1240,451 @@ export default function ProfilePage() {
     );
   }
 
-  // ── Questionnaire group content ────────────────────────────────────────────
+  // ── Questionnaire group content (9 steps) ────────────────────────────────────
 
   function renderGroupContent() {
     switch (currentGroup) {
 
+      // ── STEP 1: Basic Info ──────────────────────────────────────────────────
       case 0:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
+            <div>
+              {renderLabel("Full name")}
+              <input style={inputStyle} type="text" placeholder="Your full name" autoFocus
+                value={answers.full_name} onChange={e => setA("full_name", e.target.value)} />
+            </div>
+            <div>
+              {renderLabel("What year are you in school?")}
+              {renderPills("education_status", ["Sophomore", "Junior", "Senior", "Gap Year", "Other"])}
+            </div>
+            <div>
+              {renderLabel("When do you graduate high school?")}
+              {renderPills("graduation_year", ["2025", "2026", "2027", "2028", "Other"])}
+            </div>
+            <div style={{ position: "relative" }}>
+              {renderLabel("Which high school do you attend?")}
+              <input style={inputStyle} type="text" placeholder="Start typing your school…"
+                value={answers.high_school_name}
+                onChange={e => { setA("high_school_name", e.target.value); setHsOpen(true); }}
+                onFocus={() => { if (answers.high_school_name) setHsOpen(true); }}
+                onBlur={() => setTimeout(() => setHsOpen(false), 150)} />
+              {hsOpen && hsSuggestions.length > 0 && (
+                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: surface, border: `0.5px solid ${border}`, borderRadius: 8, boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 220, overflowY: "auto" }}>
+                  {hsSuggestions.map(s => (
+                    <button key={s} type="button" onMouseDown={e => e.preventDefault()}
+                      onClick={() => { setA("high_school_name", s); setHsOpen(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, background: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                    >{s}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              {renderLabel("GPA (out of 4.0)")}
+              <input style={inputStyle} type="number" min={0} max={4} step={0.01} placeholder="e.g. 3.85"
+                value={answers.gpa} onChange={e => setA("gpa", e.target.value)} />
+            </div>
+            <div>
+              {renderLabel("Class rank")}
+              {renderPills("class_rank", ["Top 1%", "Top 5%", "Top 10%", "Top 25%", "Top 50%", "Not ranked", "Prefer not to say"])}
+            </div>
+          </div>
+        );
+
+      // ── STEP 2: Academics ──────────────────────────────────────────────────
+      case 1:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("What are your main academic interests?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Subjects, disciplines, or areas you genuinely care about — not just what looks good.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 96 }} maxLength={400}
+                placeholder="e.g. I'm obsessed with the intersection of neuroscience and education — why some people learn faster and what that means for how we teach..."
+                value={answers.passion_description}
+                onChange={e => setA("passion_description", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.passion_description.length}/400</div>
+            </div>
+            <div>
+              {renderLabel("What are you planning to study? (intended major)")}
+              <textarea style={{ ...textareaStyle, height: 72 }} maxLength={200}
+                placeholder="e.g. Computer Science, or somewhere between economics and public policy — I'm not sure yet..."
+                value={answers.why_this_major}
+                onChange={e => setA("why_this_major", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.why_this_major.length}/200</div>
+            </div>
+            <div>
+              {renderLabel("Interests & hobbies outside school")}
+              {renderMultiPills("hobbies", HOBBIES)}
+            </div>
+          </div>
+        );
+
+      // ── STEP 3: Activities ─────────────────────────────────────────────────
+      case 2:
+        return (
+          <div style={{ color: text }}>
+            {/* PDF Import Banner */}
+            <div style={{ background: "rgba(154,112,64,0.08)", border: "1px solid rgba(154,112,64,0.35)", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a7040" strokeWidth="1.8" style={{ flexShrink: 0 }}>
+                <polyline points="16 16 12 12 8 16" />
+                <line x1="12" y1="12" x2="12" y2="21" />
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+              </svg>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: text, marginBottom: 3, fontFamily: "system-ui, -apple-system, sans-serif" }}>Import from Common App</div>
+                <div style={{ fontSize: 12, color: muted, fontFamily: "system-ui, -apple-system, sans-serif" }}>Upload your CommonApp PDF to auto-fill your activities instantly</div>
+              </div>
+              <div>
+                <input ref={secondaryFileRef} type="file" accept="application/pdf" multiple style={{ display: "none" }}
+                  onChange={async e => {
+                    if (!e.target.files) return;
+                    const pdfs = Array.from(e.target.files).filter(f => f.type === "application/pdf");
+                    const converted = await Promise.all(pdfs.map(async f => {
+                      const base64 = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = ev => resolve((ev.target?.result as string).split(",")[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(f);
+                      });
+                      return { name: f.name, base64 };
+                    }));
+                    setSecondaryFiles(converted);
+                    e.target.value = "";
+                  }} />
+                {secondaryFiles.length === 0 ? (
+                  <button type="button" onClick={() => secondaryFileRef.current?.click()}
+                    style={{ fontSize: 13, color: "#9a7040", background: "transparent", border: "1px solid #9a7040", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 500, WebkitAppearance: "none", appearance: "none", whiteSpace: "nowrap" }}>
+                    Browse PDF
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, alignItems: "flex-end" }}>
+                    <div style={{ fontSize: 12, color: text, fontFamily: "system-ui, -apple-system, sans-serif", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{secondaryFiles[0].name}</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button type="button" disabled={secondaryUploading} onClick={async () => {
+                        setSecondaryUploading(true);
+                        try {
+                          const res = await fetch("/api/parse-common-app", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ files: secondaryFiles }) });
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (Array.isArray(data.activities) && data.activities.length > 0) {
+                              const mapped = mapParsedActivities(data.activities);
+                              setActivities(mapped);
+                              setExpandedActivities(mapped.map((_, i) => i === 0));
+                            }
+                          }
+                        } catch { /* silently fail */ }
+                        setSecondaryUploading(false);
+                        setSecondaryFiles([]);
+                      }} style={{ fontSize: 12, color: isDark ? "#080810" : "#FAFAF5", background: "#9a7040", border: "none", borderRadius: 7, padding: "6px 14px", cursor: secondaryUploading ? "not-allowed" : "pointer", opacity: secondaryUploading ? 0.7 : 1, fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                        {secondaryUploading ? "Importing…" : "Import →"}
+                      </button>
+                      <button type="button" onClick={() => setSecondaryFiles([])}
+                        style={{ fontSize: 12, color: muted, background: "transparent", border: `0.5px solid ${border}`, borderRadius: 7, padding: "6px 10px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {activities.map((act, i) => renderActivityCard(act, i))}
+            {activities.length < 10 && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                <button type="button"
+                  onClick={() => { setActivities(prev => [...prev, { ...EMPTY_ACTIVITY }]); setExpandedActivities(prev => [...prev, true]); }}
+                  style={{ width: 40, height: 40, borderRadius: "50%", border: `1.5px solid ${gold}`, backgroundColor: "transparent", color: gold, fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", WebkitAppearance: "none", appearance: "none" }}>+</button>
+              </div>
+            )}
+          </div>
+        );
+
+      // ── STEP 4: College Preferences ────────────────────────────────────────
+      case 3:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("Type of school (select all that apply)")}
+              {renderMultiSelectPills(["Public", "Private", "Liberal Arts", "Research University", "Technical / STEM", "All of the above"], answers.school_type, toggleSchoolType)}
+            </div>
+            <div>
+              {renderLabel("Campus environment (select all that apply)")}
+              {renderMultiSelectPills(["Urban city", "College town", "Suburban", "Rural", "All of the above"], answers.campus_environment, toggleCampusEnv)}
+            </div>
+            <div>
+              {renderLabel("Campus size")}
+              {renderPills("campus_size", ["Small (under 3,000)", "Medium (3,000–10,000)", "Large (10,000–20,000)", "Very large (20,000+)", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Social culture (select all that apply)")}
+              {renderMultiSelectPills(["Greek life", "No Greek life", "Division I sports", "Quiet/studious", "Artsy and creative", "Very competitive", "Collaborative", "Party scene", "No preference"], answers.social_culture, toggleSocialCulture)}
+            </div>
+            <div>
+              {renderLabel("Distance from home")}
+              {renderPills("distance_preference", ["Close (under 2 hrs)", "Moderate (2–5 hrs)", "Far (5+ hrs)", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Climate")}
+              {renderPills("climate_preference", ["Warm and sunny", "Cold winters", "Mild year-round", "No preference"])}
+            </div>
+            <div>
+              {renderLabel("Financial aid need")}
+              {renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "Unsure"])}
+            </div>
+          </div>
+        );
+
+      // ── STEP 5: Background ─────────────────────────────────────────────────
+      case 4:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
+            <div>
+              {renderLabel("US citizenship or residency status")}
+              {renderPills("us_citizenship", ["US citizen", "Dual citizen", "Permanent resident", "Not a US citizen"])}
+            </div>
+            {answers.us_citizenship === "Dual citizen" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  {renderLabel("Primary citizenship country")}
+                  <select value={answers.country} onChange={e => setA("country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <option value="">Select country…</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  {renderLabel("Second citizenship country")}
+                  <select value={answers.second_citizenship_country} onChange={e => setA("second_citizenship_country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <option value="">Select country…</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+            {(answers.us_citizenship === "US citizen" || answers.us_citizenship === "Permanent resident") && (
+              <div>
+                {renderLabel("US state of residence")}
+                <select value={answers.us_resident_state} onChange={e => setA("us_resident_state", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">Select a state…</option>
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+            {answers.us_citizenship === "Not a US citizen" && (
+              <div>
+                {renderLabel("Country of origin")}
+                <select value={answers.country} onChange={e => setA("country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">Select country…</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              {renderLabel("Phone number")}
+              <input style={inputStyle} type="tel" placeholder="+1 (555) 000-0000"
+                value={answers.phone}
+                onChange={e => { const c = e.target.value.replace(/[^\d+\(\)\-\s]/g, ""); setA("phone", c); }} />
+            </div>
+            <div>
+              {renderLabel("Are you a first-generation college student?")}
+              {renderPills("first_gen", ["Yes", "No", "Prefer not to say"])}
+            </div>
+          </div>
+        );
+
+      // ── STEP 6: Standardized Testing ───────────────────────────────────────
+      case 5:
+        return (
+          <div style={{ color: text }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: "0 28px" }}>
+              {/* Left: US Tests */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>U.S. Tests</div>
+                <div>
+                  {renderLabel("SAT Total Score")}
+                  <input style={inputStyle} type="number" min={400} max={1600} placeholder="e.g. 1480"
+                    value={answers.sat_score} onChange={e => setA("sat_score", e.target.value)} />
+                </div>
+                <div>
+                  {renderLabel("ACT Composite Score")}
+                  <input style={inputStyle} type="number" min={1} max={36} placeholder="e.g. 32"
+                    value={answers.act_score} onChange={e => setA("act_score", e.target.value)} />
+                </div>
+                <div style={{ fontSize: 12, color: muted, fontFamily: "system-ui, -apple-system, sans-serif", fontStyle: "italic" }}>
+                  Leave blank if not taken or not submitting
+                </div>
+              </div>
+              {/* Vertical divider */}
+              <div style={{ background: border, width: 1 }} />
+              {/* Right: English Proficiency */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>English Proficiency</div>
+                <div>
+                  {renderLabel("Test type")}
+                  {renderPills("english_test_type", ["TOEFL", "IELTS", "Duolingo", "Not yet", "Not required"])}
+                </div>
+                {(answers.english_test_type === "TOEFL" || answers.english_test_type === "IELTS" || answers.english_test_type === "Duolingo") && (
+                  <div>
+                    {renderLabel("Score")}
+                    <input style={inputStyle} type="number" placeholder="Enter your score"
+                      value={answers.english_test_score} onChange={e => setA("english_test_score", e.target.value)} />
+                  </div>
+                )}
+                <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  Complete only if English is not your first language or your school requires it.
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      // ── STEP 7: Essays & Goals ─────────────────────────────────────────────
+      case 6:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("Why this major or field?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Not the polished version — the real reason. What pulled you toward this?
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} maxLength={500}
+                placeholder="e.g. I took one statistics class and realized I'd been thinking about data completely wrong my whole life. Now I can't stop..."
+                value={answers.why_this_major}
+                onChange={e => setA("why_this_major", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.why_this_major.length}/500</div>
+            </div>
+            <div>
+              {renderLabel("Career goals")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Where do you see yourself in 10 years? What problem do you want to work on?
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} maxLength={500}
+                placeholder="e.g. I want to work on the healthcare access problem — specifically figuring out why rural hospitals keep closing and what policy could actually fix it..."
+                value={answers.career_goals}
+                onChange={e => setA("career_goals", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.career_goals.length}/500</div>
+            </div>
+            <div>
+              {renderLabel("Essay topic ideas (optional)")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                Any experiences, moments, or stories you&apos;re considering writing about? Even vague ideas help.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 88 }} maxLength={400}
+                placeholder="e.g. The summer I spent learning glassblowing with my grandfather. The time I crashed a moot court competition I wasn't registered for..."
+                value={answers.essay_topics}
+                onChange={e => setA("essay_topics", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.essay_topics.length}/400</div>
+            </div>
+          </div>
+        );
+
+      // ── STEP 8: Financial Aid ──────────────────────────────────────────────
+      case 7:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            <div>
+              {renderLabel("Estimated family income bracket")}
+              {renderPills("family_income_bracket", [
+                "Under $40K", "$40K–$80K", "$80K–$130K", "$130K–$200K", "Over $200K", "Prefer not to say"
+              ])}
+            </div>
+            <div>
+              {renderLabel("Are you planning to file a CSS Profile?")}
+              {renderPills("css_profile_aware", ["Yes, already filed", "Yes, planning to", "Not sure", "No — schools don't require it"])}
+            </div>
+            <div style={{ background: isDark ? "rgba(201,169,110,0.07)" : "rgba(154,112,64,0.05)", border: `0.5px solid ${gold}55`, borderRadius: 10, padding: "14px 16px" }}>
+              <div style={{ fontSize: 13, color: muted, lineHeight: 1.7, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                The CSS Profile is required by ~400 colleges (mostly private) for institutional aid. It&apos;s different from FAFSA and often unlocks significantly more aid. If you haven&apos;t looked into it, check the College Board website.
+              </div>
+            </div>
+          </div>
+        );
+
+      // ── STEP 9: About You ──────────────────────────────────────────────────
+      case 8:
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            {/* Section A */}
+            {[
+              { label: "What do you do when nobody is watching?", field: "private_passion" as keyof Answers, placeholder: "e.g. I rewrite Wikipedia articles I think are wrong. I make elaborate playlists for moods that don't have names...", max: 300 },
+              { label: "Is there anything about you that would surprise people who know you well?", field: "unusual_trait" as keyof Answers, placeholder: "e.g. I have a second life as a competitive crossword puzzle writer...", max: 300 },
+              { label: "What's something you completely changed your mind about?", field: "changed_mind" as keyof Answers, placeholder: "e.g. I used to think discipline was everything. Then I read about luck in outcomes research and it broke my model...", max: 300 },
+              { label: "Who or what has most influenced how you think?", field: "meaningful_influence" as keyof Answers, placeholder: "e.g. My grandfather's stories about working as a translator during the Cold War changed how I see language...", max: 300 },
+            ].map(({ label, field, placeholder, max }) => (
+              <div key={field}>
+                {renderLabel(label)}
+                <textarea style={{ ...textareaStyle, height: 96 }} maxLength={max}
+                  placeholder={placeholder}
+                  value={answers[field] as string}
+                  onChange={e => setA(field, e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{(answers[field] as string).length}/{max}</div>
+              </div>
+            ))}
+
+            {/* Section B — Optional */}
+            <div style={{ borderTop: `1px solid ${border}`, paddingTop: 32, marginTop: 8 }}>
+              <div style={{ border: "1px solid rgba(154,112,64,0.3)", background: "rgba(154,112,64,0.04)", borderRadius: 14, padding: "20px 24px", marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <span style={{ color: gold, fontSize: 20, lineHeight: 1.2, marginTop: 2, flexShrink: 0 }}>✦</span>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: gold, marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>Optional — but worth it</div>
+                    <div style={{ fontSize: 13, color: muted, lineHeight: 1.7, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                      Everything below is completely optional. These questions help SheldonAI understand the real you — not just your grades and clubs. Your answers are used to generate essay angles, make your application feel human, and surface the kind of details admissions officers actually remember. Answer none, one, or all. Even one honest answer makes a difference. There are no wrong answers here.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+                <div>
+                  {renderLabel("What's the most embarrassing thing you're genuinely proud of?")}
+                  <textarea style={{ ...textareaStyle, height: 96 }} maxLength={400}
+                    placeholder="e.g. I've memorized the capital cities of every sovereign nation on Earth. I can name every Pope in order..."
+                    value={answers.embarrassing_pride}
+                    onChange={e => setA("embarrassing_pride", e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.embarrassing_pride.length}/400</div>
+                </div>
+                <div>
+                  {renderLabel("What problem would you work on if success was guaranteed?")}
+                  <textarea style={{ ...textareaStyle, height: 96 }} maxLength={400}
+                    placeholder="e.g. I would figure out why teenagers stop reading for pleasure and fix it..."
+                    value={answers.guaranteed_success}
+                    onChange={e => setA("guaranteed_success", e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.guaranteed_success.length}/400</div>
+                </div>
+                <div>
+                  {renderLabel("What's something about you that would never appear on your activities list?")}
+                  <textarea style={{ ...textareaStyle, height: 96 }} maxLength={400}
+                    placeholder="e.g. I've been doing my family's taxes since I was 14. I can identify any bird by its call. I collect ceramic frogs from every country I visit..."
+                    value={answers.unique_personal_trait}
+                    onChange={e => setA("unique_personal_trait", e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, marginTop: 6, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                    Too weird, too personal, too niche, too non-academic — but genuinely you. These are often the most memorable details in any application.
+                  </div>
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.unique_personal_trait.length}/400</div>
+                </div>
+                <div>
+                  {renderLabel("Anything else?")}
+                  <textarea style={{ ...textareaStyle, height: 120 }} maxLength={600}
+                    placeholder="This is a free space. Write whatever you want. Something that doesn't fit anywhere else. Something strange, personal, or important that you haven't had a chance to say."
+                    value={answers.anything_else}
+                    onChange={e => setA("anything_else", e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.anything_else.length}/600</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      // ── OLD PLACEHOLDER (should not render) ────────────────────────────────
+      case 9:
+        return null;
+      case 10:
+        return null;
+
+      case 99999: // dead code — kept only so old references below compile
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
             <div>
@@ -1950,89 +2423,62 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Section 1: Personal Information */}
-          {sectionCard(0, "Personal Information",
+          {/* Section 1: Basic Info */}
+          {sectionCard(0, "Basic Info",
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
               {fieldRow("Full Name", fieldVal(answers.full_name))}
-              {fieldRow("Date of Birth", fieldVal(answers.birthday))}
-              {fieldRow("Gender", fieldVal(answers.gender))}
-            </div>,
-            <>
-              <div>{renderLabel("Full name")}<input style={inputStyle} type="text" placeholder="Your full name" value={answers.full_name} onChange={e => setA("full_name", e.target.value)} /></div>
-              <div>{renderLabel("Date of birth")}<input style={inputStyle} type="date" value={answers.birthday} onChange={e => setA("birthday", e.target.value)} /></div>
-              <div>{renderLabel("Gender")}{renderPills("gender", ["Male", "Female", "Non-binary", "Prefer not to say"])}</div>
-            </>
-          )}
-
-          {/* Section 2: Background */}
-          {sectionCard(1, "Background",
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
-              {fieldRow("Ethnicity", fieldVal(answers.ethnicity_other || answers.ethnicity))}
-              {fieldRow("Religion", fieldVal(answers.religion_other || answers.religion))}
-              {fieldRow("Ability to Pay", fieldVal(answers.ability_to_pay))}
               {fieldRow("Year in School", fieldVal(answers.education_status))}
-            </div>,
-            <>
-              <div>
-                {renderLabel("Ethnicity")}
-                {renderPills("ethnicity", ["American Indian/Alaska Native","Asian","Black/African American","Hispanic/Latino","Native Hawaiian/Pacific Islander","White/Caucasian","Two or more races","Prefer not to say","Other"])}
-                {answers.ethnicity === "Other" && <input style={{ ...inputStyle, marginTop: 12 }} type="text" placeholder="Please describe" value={answers.ethnicity_other} onChange={e => setA("ethnicity_other", e.target.value)} />}
-              </div>
-              <div>
-                {renderLabel("Religion")}
-                {renderPills("religion", ["Agnostic","Atheist","Buddhist","Catholic","Christian","Eastern Orthodox","Hindu","Jewish","Muslim","Sikh","Prefer not to say","Other"])}
-                {answers.religion === "Other" && <input style={{ ...inputStyle, marginTop: 12 }} type="text" placeholder="Please describe" value={answers.religion_other} onChange={e => setA("religion_other", e.target.value)} />}
-              </div>
-              <div>{renderLabel("Ability to pay for college")}{renderPills("ability_to_pay", ["Full Pay","Need Financial Aid","Partial Aid","Not Sure","Prefer not to say"])}</div>
-              <div>{renderLabel("Year in school")}{renderPills("education_status", ["Sophomore","Junior","Senior","Gap Year","Other"])}</div>
-            </>
-          )}
-
-          {/* Section 3: Academic Year */}
-          {sectionCard(2, "Academic Year",
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
               {fieldRow("Graduation Year", fieldVal(answers.graduation_year))}
-              {fieldRow("Start Semester", fieldVal(answers.start_semester))}
-            </div>,
-            <>
-              <div>{renderLabel("Graduation year")}{renderPills("graduation_year", ["2025","2026","2027","2028","Other"])}</div>
-              <div>{renderLabel("Start semester")}{renderPills("start_semester", ["Fall 2025","Spring 2026","Fall 2026","Spring 2027","Fall 2027","Not sure"])}</div>
-            </>
-          )}
-
-          {/* Section 4: High School */}
-          {sectionCard(3, "High School",
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
-              {fieldRow("School", fieldVal(answers.high_school_name))}
+              {fieldRow("High School", fieldVal(answers.high_school_name))}
               {fieldRow("GPA", fieldVal(answers.gpa))}
               {fieldRow("Class Rank", fieldVal(answers.class_rank))}
             </div>,
             <>
+              <div>{renderLabel("Full name")}<input style={inputStyle} type="text" placeholder="Your full name" value={answers.full_name} onChange={e => setA("full_name", e.target.value)} /></div>
+              <div>{renderLabel("Year in school")}{renderPills("education_status", ["Sophomore", "Junior", "Senior", "Gap Year", "Other"])}</div>
+              <div>{renderLabel("Graduation year")}{renderPills("graduation_year", ["2025", "2026", "2027", "2028", "Other"])}</div>
               <div style={{ position: "relative" }}>
-                {renderLabel("High school name")}
-                <input style={inputStyle} type="text" placeholder="Start typing\…" value={answers.high_school_name}
+                {renderLabel("High school")}
+                <input style={inputStyle} type="text" placeholder="Start typing your school…" value={answers.high_school_name}
                   onChange={e => { setA("high_school_name", e.target.value); setHsOpen(true); }}
                   onFocus={() => { if (answers.high_school_name) setHsOpen(true); }}
                   onBlur={() => setTimeout(() => setHsOpen(false), 150)} />
                 {hsOpen && hsSuggestions.length > 0 && (
-                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: surface, border: `0.5px solid ${border}`, borderRadius: 8, boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 220, overflowY: "auto" }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: surface, border: `0.5px solid ${border}`, borderRadius: 8, maxHeight: 220, overflowY: "auto" }}>
                     {hsSuggestions.map(s => (
                       <button key={s} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setA("high_school_name", s); setHsOpen(false); }}
-                        style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, background: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                      >{s}</button>
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, background: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif" }}>{s}</button>
                     ))}
                   </div>
                 )}
               </div>
               <div>{renderLabel("GPA (out of 4.0)")}<input style={inputStyle} type="number" min={0} max={4} step={0.01} placeholder="e.g. 3.85" value={answers.gpa} onChange={e => setA("gpa", e.target.value)} /></div>
-              <div>{renderLabel("Class rank")}{renderPills("class_rank", ["Top 1%","Top 5%","Top 10%","Top 25%","Top 50%","Not ranked","Prefer not to say"])}</div>
+              <div>{renderLabel("Class rank")}{renderPills("class_rank", ["Top 1%", "Top 5%", "Top 10%", "Top 25%", "Top 50%", "Not ranked", "Prefer not to say"])}</div>
             </>
           )}
 
-          {/* Section 5: Activities */}
-          {sectionCard(4, "Activities & Leadership",
+          {/* Section 2: Academics */}
+          {sectionCard(1, "Academics",
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("Academic Interests", fieldVal(answers.passion_description))}
+              {fieldRow("Intended Major", fieldVal(answers.why_this_major))}
+              {fieldRow("Hobbies", tagsList(answers.hobbies))}
+            </div>,
+            <>
+              <div>
+                {renderLabel("Academic interests")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={400} placeholder="Subjects you genuinely care about…" value={answers.passion_description} onChange={e => setA("passion_description", e.target.value)} />
+              </div>
+              <div>
+                {renderLabel("Intended major")}
+                <textarea style={{ ...textareaStyle, height: 72 }} maxLength={200} placeholder="e.g. Computer Science, or undecided…" value={answers.why_this_major} onChange={e => setA("why_this_major", e.target.value)} />
+              </div>
+              <div>{renderLabel("Hobbies")}{renderMultiPills("hobbies", HOBBIES)}</div>
+            </>
+          )}
+
+          {/* Section 3: Activities */}
+          {sectionCard(2, "Activities",
             visibleActivities.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {visibleActivities.map((a, i) => (
@@ -2060,175 +2506,166 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Section 6: Who You Really Are */}
-          {/* Section 6: How You Think */}
-          {sectionCard(5, "How You Think",
+          {/* Section 4: College Preferences */}
+          {sectionCard(3, "College Preferences",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Changed your mind", fieldVal(answers.changed_mind))}
-              {fieldRow("Most meaningful creation", fieldVal(answers.meaningful_influence))}
-              {fieldRow("World problem", fieldVal(answers.world_problem))}
-            </div>,
-            <>
-              <div>
-                {renderLabel("A time you completely changed your mind")}
-                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="What did you used to believe? What changed?" value={answers.changed_mind} onChange={e => setA("changed_mind", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.changed_mind.length}/500</div>
-              </div>
-              <div>
-                {renderLabel("Most meaningful thing you\'ve built or created")}
-                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="A project, relationship, system, or creation..." value={answers.meaningful_influence} onChange={e => setA("meaningful_influence", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.meaningful_influence.length}/500</div>
-              </div>
-              <div>
-                {renderLabel("One world problem you\'d dedicate your life to solving")}
-                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="Be specific \— not world peace..." value={answers.world_problem} onChange={e => setA("world_problem", e.target.value)} />
-                <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.world_problem.length}/500</div>
-              </div>
-            </>
-          )}
-
-          {/* Section 7: Test Scores */}
-          {sectionCard(6, "Test Scores",
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
-              {fieldRow("SAT Math", fieldVal(answers.sat_math))}
-              {fieldRow("SAT Reading/Writing", fieldVal(answers.sat_english))}
-              {fieldRow("ACT", fieldVal(answers.act))}
-            </div>,
-            <>
-              <div>{renderLabel("SAT Math")}<input style={inputStyle} type="number" min={200} max={800} placeholder="e.g. 750" value={answers.sat_math} onChange={e => setA("sat_math", e.target.value)} /></div>
-              <div>{renderLabel("SAT Reading/Writing")}<input style={inputStyle} type="number" min={200} max={800} placeholder="e.g. 750" value={answers.sat_english} onChange={e => setA("sat_english", e.target.value)} /></div>
-              <div>{renderLabel("ACT Composite")}<input style={inputStyle} type="number" min={1} max={36} placeholder="e.g. 33" value={answers.act} onChange={e => setA("act", e.target.value)} /></div>
-            </>
-          )}
-
-          {/* Section 8: Location & Contact */}
-          {sectionCard(7, "Location & Contact",
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
-              {fieldRow("US Citizenship", fieldVal(answers.us_citizenship))}
-              {answers.us_resident_state && fieldRow("US Resident State", fieldVal(answers.us_resident_state))}
-              {fieldRow("Country", fieldVal(answers.country))}
-              {fieldRow("Phone", fieldVal(answers.phone))}
-            </div>,
-            <>
-              <div>
-                {renderLabel("US citizenship or residency status")}
-                {renderPills("us_citizenship", ["US Citizen only", "Dual citizen", "Permanent Resident (Green Card)", "Visa Holder", "None of the above"])}
-              </div>
-              {(answers.us_citizenship === "US Citizen only" || answers.us_citizenship === "Dual citizen" || answers.us_citizenship === "Permanent Resident (Green Card)") && (
-                <div>
-                  {renderLabel("Which US state are you a resident of?")}
-                  <select value={answers.us_resident_state} onChange={e => setA("us_resident_state", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                    <option value="">Select a state…</option>
-                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              )}
-              <div style={{ position: "relative" }}>
-                {renderLabel("Country of residence")}
-                <input style={inputStyle} type="text" placeholder="e.g. United States" value={answers.country}
-                  onChange={e => { setA("country", e.target.value); setA("state", ""); setCountryOpen(true); }}
-                  onFocus={() => { if (answers.country) setCountryOpen(true); }}
-                  onBlur={() => setTimeout(() => setCountryOpen(false), 150)} />
-                {countryOpen && countrySuggestions.length > 0 && (
-                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, backgroundColor: surface, borderStyle: "solid", borderWidth: "0.5px", borderColor: border, borderRadius: 8, boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 220, overflowY: "auto" }}>
-                    {countrySuggestions.map(c => (
-                      <button key={c} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setA("country", c); setA("state", ""); setCountryOpen(false); }}
-                        style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, backgroundColor: "transparent", borderWidth: 0, fontFamily: "system-ui, -apple-system, sans-serif", cursor: "pointer" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                      >{c}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>{renderLabel("Phone number")}<input style={inputStyle} type="tel" placeholder="+1 (555) 000-0000" value={answers.phone} onChange={e => { const c = e.target.value.replace(/[^\d+\(\)\-\s]/g, ""); setA("phone", c); }} /></div>
-            </>
-          )}
-
-          {/* Section 9: College Preferences */}
-          {sectionCard(8, "College Preferences",
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("Type of School", fieldVal(answers.school_type))}
               {fieldRow("Campus Environment", fieldVal(answers.campus_environment))}
               {fieldRow("Campus Size", fieldVal(answers.campus_size))}
-              {fieldRow("Type of School", fieldVal(answers.school_type))}
-              {fieldRow("Distance from Home", fieldVal(answers.distance_preference))}
               {fieldRow("Social Culture", fieldVal(answers.social_culture))}
-              {fieldRow("Academic Intensity", fieldVal(answers.academic_intensity))}
+              {fieldRow("Distance", fieldVal(answers.distance_preference))}
               {fieldRow("Climate", fieldVal(answers.climate_preference))}
               {fieldRow("Financial Aid Need", fieldVal(answers.financial_aid_need))}
             </div>,
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>{renderLabel("Campus environment")}{renderPills("campus_environment", ["Urban city", "College town", "Suburban", "Rural", "No preference"])}</div>
+              <div>{renderLabel("Type of school")}{renderMultiSelectPills(["Public", "Private", "Liberal Arts", "Research University", "Technical / STEM", "All of the above"], answers.school_type, toggleSchoolType)}</div>
+              <div>{renderLabel("Campus environment")}{renderMultiSelectPills(["Urban city", "College town", "Suburban", "Rural", "All of the above"], answers.campus_environment, toggleCampusEnv)}</div>
               <div>{renderLabel("Campus size")}{renderPills("campus_size", ["Small (under 3,000)", "Medium (3,000–10,000)", "Large (10,000–20,000)", "Very large (20,000+)", "No preference"])}</div>
-              <div>{renderLabel("Type of school")}{renderPills("school_type", ["Private university", "Public university", "Liberal arts college", "Research university", "No preference"])}</div>
+              <div>{renderLabel("Social culture")}{renderMultiSelectPills(["Greek life", "No Greek life", "Division I sports", "Quiet/studious", "Artsy and creative", "Very competitive", "Collaborative", "Party scene", "No preference"], answers.social_culture, toggleSocialCulture)}</div>
               <div>{renderLabel("Distance from home")}{renderPills("distance_preference", ["Close (under 2 hrs)", "Moderate (2–5 hrs)", "Far (5+ hrs)", "No preference"])}</div>
-              <div>{renderLabel("Social culture")}{renderPills("social_culture", ["Greek life active", "No Greek life", "Division I sports", "Quiet academic", "Artsy and creative", "No preference"])}</div>
-              <div>{renderLabel("Academic intensity")}{renderPills("academic_intensity", ["Extremely rigorous", "Rigorous", "Balanced", "No preference"])}</div>
               <div>{renderLabel("Climate")}{renderPills("climate_preference", ["Warm and sunny", "Cold winters", "Mild year-round", "No preference"])}</div>
-              <div>{renderLabel("Financial aid need")}{renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "No preference"])}</div>
+              <div>{renderLabel("Financial aid need")}{renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "Unsure"])}</div>
             </div>
           )}
 
-          {/* Section 10: Testing & Language */}
-          {sectionCard(9, "Testing & Language",
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("International Student", fieldVal(answers.is_international))}
-              {answers.is_international === "Yes" && fieldRow("English Test", fieldVal(answers.english_test_type))}
-              {answers.is_international === "Yes" && answers.english_test_score && fieldRow("Test Score", fieldVal(answers.english_test_score))}
+          {/* Section 5: Background */}
+          {sectionCard(4, "Background",
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
+              {fieldRow("US Citizenship", fieldVal(answers.us_citizenship))}
+              {answers.us_resident_state && fieldRow("US State", fieldVal(answers.us_resident_state))}
+              {answers.country && fieldRow("Country", fieldVal(answers.country))}
+              {answers.second_citizenship_country && fieldRow("Second Citizenship", fieldVal(answers.second_citizenship_country))}
+              {fieldRow("Phone", fieldVal(answers.phone))}
+              {fieldRow("First Generation", fieldVal(answers.first_gen))}
             </div>,
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                {renderLabel("Are you an international student?")}
-                {renderPills("is_international", ["Yes", "No"])}
-              </div>
-              {answers.is_international === "Yes" && (
-                <div>
-                  {renderLabel("English proficiency test")}
-                  {renderPills("english_test_type", ["TOEFL iBT", "IELTS Academic", "Duolingo English Test", "Not yet", "Not required for my target schools"])}
+            <>
+              <div>{renderLabel("US citizenship or residency status")}{renderPills("us_citizenship", ["US citizen", "Dual citizen", "Permanent resident", "Not a US citizen"])}</div>
+              {answers.us_citizenship === "Dual citizen" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>{renderLabel("Primary citizenship country")}<select value={answers.country} onChange={e => setA("country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}><option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                  <div>{renderLabel("Second citizenship country")}<select value={answers.second_citizenship_country} onChange={e => setA("second_citizenship_country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}><option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
               )}
-              {answers.is_international === "Yes" && (answers.english_test_type === "TOEFL iBT" || answers.english_test_type === "IELTS Academic" || answers.english_test_type === "Duolingo English Test") && (
-                <div>
-                  {renderLabel("Test score")}
-                  <input
-                    type="number"
-                    placeholder="Enter your score"
-                    value={answers.english_test_score}
-                    onChange={e => setA("english_test_score", e.target.value)}
-                    style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
-                  />
-                </div>
+              {(answers.us_citizenship === "US citizen" || answers.us_citizenship === "Permanent resident") && (
+                <div>{renderLabel("US state of residence")}<select value={answers.us_resident_state} onChange={e => setA("us_resident_state", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}><option value="">Select a state…</option>{US_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
               )}
-            </div>
+              {answers.us_citizenship === "Not a US citizen" && (
+                <div>{renderLabel("Country of origin")}<select value={answers.country} onChange={e => setA("country", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}><option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              )}
+              <div>{renderLabel("Phone number")}<input style={inputStyle} type="tel" placeholder="+1 (555) 000-0000" value={answers.phone} onChange={e => { const c = e.target.value.replace(/[^\d+\(\)\-\s]/g, ""); setA("phone", c); }} /></div>
+              <div>{renderLabel("First-generation college student?")}{renderPills("first_gen", ["Yes", "No", "Prefer not to say"])}</div>
+            </>
           )}
 
-          {/* Section 11: The Personal Stuff */}
-          {sectionCard(10, "The Personal Stuff",
+          {/* Section 6: Standardized Testing */}
+          {sectionCard(5, "Standardized Testing",
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
+              {fieldRow("SAT Total", fieldVal(answers.sat_score))}
+              {fieldRow("ACT Composite", fieldVal(answers.act_score))}
+              {fieldRow("English Test", fieldVal(answers.english_test_type))}
+              {answers.english_test_score && fieldRow("English Score", fieldVal(answers.english_test_score))}
+            </div>,
+            <>
+              <div>{renderLabel("SAT Total Score")}<input style={inputStyle} type="number" min={400} max={1600} placeholder="e.g. 1480" value={answers.sat_score} onChange={e => setA("sat_score", e.target.value)} /></div>
+              <div>{renderLabel("ACT Composite Score")}<input style={inputStyle} type="number" min={1} max={36} placeholder="e.g. 32" value={answers.act_score} onChange={e => setA("act_score", e.target.value)} /></div>
+              <div>{renderLabel("English proficiency test")}{renderPills("english_test_type", ["TOEFL", "IELTS", "Duolingo", "Not yet", "Not required"])}</div>
+              {(answers.english_test_type === "TOEFL" || answers.english_test_type === "IELTS" || answers.english_test_type === "Duolingo") && (
+                <div>{renderLabel("Score")}<input style={inputStyle} type="number" placeholder="Enter your score" value={answers.english_test_score} onChange={e => setA("english_test_score", e.target.value)} /></div>
+              )}
+            </>
+          )}
+
+          {/* Section 7: Essays & Goals */}
+          {sectionCard(6, "Essays & Goals",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Free Friday night", fieldVal(answers.friday_night))}
-              {fieldRow("Could talk about for hours", fieldVal(answers.obsession_topic))}
-              {fieldRow("Self-taught", fieldVal(answers.self_taught))}
-              {fieldRow("Common misconception", fieldVal(answers.common_misconception))}
-              {fieldRow("Embarrassing pride", fieldVal(answers.embarrassing_pride))}
-              {fieldRow("Guaranteed success problem", fieldVal(answers.guaranteed_success))}
+              {fieldRow("Why This Major", fieldVal(answers.why_this_major))}
+              {fieldRow("Career Goals", fieldVal(answers.career_goals))}
+              {fieldRow("Essay Topic Ideas", fieldVal(answers.essay_topics))}
+            </div>,
+            <>
+              <div>
+                {renderLabel("Why this major or field?")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="The real reason…" value={answers.why_this_major} onChange={e => setA("why_this_major", e.target.value)} />
+              </div>
+              <div>
+                {renderLabel("Career goals")}
+                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={500} placeholder="Where do you see yourself in 10 years?" value={answers.career_goals} onChange={e => setA("career_goals", e.target.value)} />
+              </div>
+              <div>
+                {renderLabel("Essay topic ideas (optional)")}
+                <textarea style={{ ...textareaStyle, height: 72 }} maxLength={400} placeholder="Any experiences or moments you're considering…" value={answers.essay_topics} onChange={e => setA("essay_topics", e.target.value)} />
+              </div>
+            </>
+          )}
+
+          {/* Section 8: Financial Aid */}
+          {sectionCard(7, "Financial Aid",
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 32px" }}>
+              {fieldRow("Family Income Bracket", fieldVal(answers.family_income_bracket))}
+              {fieldRow("CSS Profile", fieldVal(answers.css_profile_aware))}
+            </div>,
+            <>
+              <div>{renderLabel("Estimated family income bracket")}{renderPills("family_income_bracket", ["Under $40K", "$40K–$80K", "$80K–$130K", "$130K–$200K", "Over $200K", "Prefer not to say"])}</div>
+              <div>{renderLabel("CSS Profile plans")}{renderPills("css_profile_aware", ["Yes, already filed", "Yes, planning to", "Not sure", "No — schools don't require it"])}</div>
+            </>
+          )}
+
+          {/* Section 9: About You */}
+          {sectionCard(8, "About You",
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fieldRow("What you do when nobody's watching", fieldVal(answers.private_passion))}
+              {fieldRow("Would surprise people who know you", fieldVal(answers.unusual_trait))}
+              {fieldRow("Something you changed your mind about", fieldVal(answers.changed_mind))}
+              {fieldRow("Who/what influenced how you think", fieldVal(answers.meaningful_influence))}
             </div>,
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {[
-                { label: "What do you do at 11pm on a free Friday?", field: "friday_night" as keyof Answers, placeholder: "e.g. I rewatch the same three documentary series...", max: 300 },
-                { label: "What could you talk about for three hours without preparing?", field: "obsession_topic" as keyof Answers, placeholder: "e.g. The geopolitics of water rights in Central Asia...", max: 300 },
-                { label: "What have you taught yourself that nobody asked you to learn?", field: "self_taught" as keyof Answers, placeholder: "e.g. I taught myself to read Ottoman Turkish...", max: 300 },
-                { label: "What do most people get completely wrong about something you know well?", field: "common_misconception" as keyof Answers, placeholder: "e.g. People think being good at math means being fast...", max: 300 },
-                { label: "What is the most embarrassing thing you are genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation...", max: 300 },
-                { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure...", max: 300 },
-              ].map(({ label, field, placeholder, max }) => (
+                { label: "What do you do when nobody is watching?", field: "private_passion" as keyof Answers },
+                { label: "Anything that would surprise people who know you well?", field: "unusual_trait" as keyof Answers },
+                { label: "Something you completely changed your mind about", field: "changed_mind" as keyof Answers },
+                { label: "Who or what has most influenced how you think?", field: "meaningful_influence" as keyof Answers },
+                { label: "Most embarrassing thing you're genuinely proud of (optional)", field: "embarrassing_pride" as keyof Answers },
+                { label: "Problem you'd work on if success was guaranteed (optional)", field: "guaranteed_success" as keyof Answers },
+                { label: "Something that would never appear on your activities list (optional)", field: "unique_personal_trait" as keyof Answers },
+                { label: "Anything else? (optional)", field: "anything_else" as keyof Answers },
+              ].map(({ label, field }) => (
                 <div key={field}>
                   {renderLabel(label)}
-                  <textarea style={{ ...textareaStyle, height: 88 }} maxLength={max} placeholder={placeholder} value={answers[field] as string} onChange={e => setA(field, e.target.value)} />
-                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{(answers[field] as string).length}/{max}</div>
+                  <textarea style={{ ...textareaStyle, height: 72 }} maxLength={400} placeholder="" value={answers[field] as string} onChange={e => setA(field, e.target.value)} />
                 </div>
               ))}
             </div>
           )}
+
+          {/* [old sections removed] */}
+          {false && sectionCard(4, "Activities & Leadership",
+            visibleActivities.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {visibleActivities.map((a, i) => (
+                  <div key={i} style={{ border: `0.5px solid ${border}`, borderRadius: 10, padding: "14px 16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: text, fontFamily: "system-ui, -apple-system, sans-serif", marginBottom: 4 }}>
+                      {a.activity_type}{a.position ? ` — ${a.position}` : ""}
+                    </div>
+                    {a.organization && <div style={{ fontSize: 12, color: muted, fontFamily: "system-ui, -apple-system, sans-serif", marginBottom: 4 }}>{a.organization}</div>}
+                    {a.description && <div style={{ fontSize: 13, color: text, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: "1.5" }}>{a.description}</div>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: 14, color: muted, fontStyle: "italic", fontFamily: "system-ui, -apple-system, sans-serif" }}>Not provided</span>
+            ),
+            <div style={{ color: text }}>
+              {activities.map((act, i) => renderActivityCard(act, i))}
+              {activities.length < 10 && (
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                  <button type="button"
+                    onClick={() => { setActivities(prev => [...prev, { ...EMPTY_ACTIVITY }]); setExpandedActivities(prev => [...prev, true]); }}
+                    style={{ width: 40, height: 40, borderRadius: "50%", border: `1.5px solid ${gold}`, backgroundColor: "transparent", color: gold, fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", WebkitAppearance: "none", appearance: "none" }}>+</button>
+                </div>
+              )}
+            </div>
+          )}
+
 
         </div>
       </div>
@@ -2472,48 +2909,33 @@ export default function ProfilePage() {
 
       {/* Sticky step indicator pill */}
       <div style={{
-        position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)", zIndex: 40,
+        position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)", zIndex: 50,
         background: isDark ? "#1a1a2e" : "#fff",
-        border: "0.5px solid rgba(154,112,64,0.25)", borderRadius: 999,
-        padding: "8px 20px",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        border: "1px solid rgba(154,112,64,0.3)", borderRadius: 999,
+        padding: "7px 22px",
+        boxShadow: "0 2px 16px rgba(0,0,0,0.09)",
         display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
         minWidth: 140,
       }}>
-        <div style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: text, whiteSpace: "nowrap" }}>
-          Step <span style={{ fontWeight: 700, color: gold, fontSize: 15 }}>{currentGroup + 1}</span> of {TOTAL_GROUPS}
+        <div style={{ fontSize: 14, fontFamily: "system-ui, -apple-system, sans-serif", color: text, whiteSpace: "nowrap" }}>
+          Step <span style={{ fontWeight: 700, color: gold }}>{currentGroup + 1}</span> of {TOTAL_GROUPS}
         </div>
-        <div style={{ width: "100%", height: 3, background: border, borderRadius: 999, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${((currentGroup + 1) / TOTAL_GROUPS) * 100}%`, background: gold, borderRadius: 999, transition: "width 400ms ease" }} />
+        <div style={{ width: "100%", height: 2, background: border, borderRadius: 1, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${((currentGroup + 1) / TOTAL_GROUPS) * 100}%`, background: gold, borderRadius: 1, transition: "width 400ms ease" }} />
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "132px 24px 40px" : "132px 24px 60px", width: "100%" }}>
-        <div ref={groupRef} style={{ maxWidth: currentGroup === 4 ? 640 : 560, width: "100%", color: text }}>
+      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 2 || currentGroup === 8) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 2 || currentGroup === 8) ? "132px 24px 40px" : "132px 24px 60px", width: "100%" }}>
+        <div ref={groupRef} style={{ maxWidth: currentGroup === 2 ? 640 : 560, width: "100%", color: text }}>
 
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 500, color: text, textAlign: "center", marginBottom: 8, letterSpacing: "-0.2px", marginTop: 0 }}>
             {GROUP_TITLES[currentGroup]}
           </h2>
 
-          {currentGroup === 4 && (
+          {currentGroup === 2 && (
             <p style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, textAlign: "center", marginBottom: 24, marginTop: 0 }}>
               List your activities in order of importance to you
-            </p>
-          )}
-          {currentGroup === 5 && (
-            <p style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, textAlign: "center", marginTop: -4, marginBottom: 28 }}>
-              This helps us understand your intellectual curiosity and academic depth
-            </p>
-          )}
-          {currentGroup === 6 && (
-            <p style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, textAlign: "center", marginTop: -4, marginBottom: 28 }}>
-              These are optional — skip any you haven&apos;t taken
-            </p>
-          )}
-          {currentGroup === 10 && (
-            <p style={{ fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: gold, textAlign: "center", marginTop: -4, marginBottom: 28, opacity: 0.85 }}>
-              These questions help SheldonAI understand you personally — not just academically.
             </p>
           )}
 
