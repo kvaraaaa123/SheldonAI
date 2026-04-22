@@ -62,7 +62,7 @@ export default function SignupPage() {
     if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
-    const { error: err } = await supabase.auth.signUp({ email, password });
+    const { error: err } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: 'https://sheldon-ai-red.vercel.app/dashboard' } });
     setLoading(false);
     if (err) { setError(err.message); return; }
     setView("check-email");
@@ -84,7 +84,7 @@ export default function SignupPage() {
     if (!email) { setError("Enter your email first."); return; }
     setLoading(true);
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/dashboard`,
+      redirectTo: 'https://sheldon-ai-red.vercel.app/dashboard',
     });
     setLoading(false);
     if (err) { setError(err.message); return; }
