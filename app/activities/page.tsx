@@ -117,6 +117,7 @@ export default function ActivitiesPage() {
   const [copiedIndex,    setCopiedIndex]    = useState<number | null>(null);
   const [hasDefiningActivity, setHasDefiningActivity] = useState<boolean | null>(null);
   const [definingActivity,    setDefiningActivity]    = useState("");
+  const [hoursWarning,   setHoursWarning]   = useState<{ totalHours: number; flagged: string[] } | null>(null);
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const userIdRef     = useRef<string>("");
@@ -279,7 +280,7 @@ export default function ActivitiesPage() {
       console.log("Insert error:", insertError);
 
       if (insertError) {
-        alert("Error saving: " + insertError.message);
+        console.error("Error saving grades:", insertError.message);
       }
     } catch (err) {
       console.error("Save error:", err);
@@ -289,6 +290,15 @@ export default function ActivitiesPage() {
   async function gradeActivities() {
     const filled = activities.filter(a => !!a.activity_type);
     if (filled.length === 0) return;
+
+    // Hours realism check
+    const totalHours = filled.reduce((sum, a) => sum + (parseFloat(a.hours_per_week) || 0), 0);
+    const flagged = filled
+      .filter(a => (parseFloat(a.hours_per_week) || 0) > 30)
+      .map(a => `${a.activity_type || "Activity"} (${a.hours_per_week}h/week)`);
+    const warning = totalHours > 50 ? { totalHours, flagged } : null;
+    setHoursWarning(warning);
+
     setIsGrading(true);
     setGradeResults(null);
     setPhase("results");
@@ -302,6 +312,7 @@ export default function ActivitiesPage() {
           profile,
           hasDefiningActivity: hasDefiningActivity === true,
           definingActivityDescription: definingActivity,
+          hoursWarning: warning,
         }),
       });
       if (!res.ok) return;
@@ -805,6 +816,30 @@ export default function ActivitiesPage() {
               Download Revised Activities List ↓
             </button>
           </div>
+
+          {/* Hours warning card */}
+          {hoursWarning && (
+            <div style={{ border: `1.5px solid ${isDark ? "rgba(251,191,36,0.5)" : "rgba(217,119,6,0.5)"}`, borderRadius: 12, padding: "20px 24px", marginBottom: 20, backgroundColor: isDark ? "rgba(251,191,36,0.06)" : "rgba(251,191,36,0.08)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>⚠</span>
+                <div style={{ fontSize: 15, fontWeight: 600, color: isDark ? "#fbbf24" : "#92400e", fontFamily: "system-ui, -apple-system, sans-serif" }}>Hours &amp; Commitment Check</div>
+              </div>
+              <p style={{ fontSize: 14, color: isDark ? "#fde68a" : "#78350f", fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: "1.65", margin: "0 0 10px" }}>
+                You&apos;re claiming <strong>{hoursWarning.totalHours}h/week</strong> of structured activities.{hoursWarning.totalHours > 60 ? " This is a CRITICAL red flag." : " This exceeds the recommended 50h/week maximum."} Admissions officers at selective schools know a student cannot sustainably do more than 50 hours/week of structured activities alongside school.
+              </p>
+              {hoursWarning.flagged.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: isDark ? "#fbbf24" : "#92400e", marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Activities claiming over 30h/week</div>
+                  {hoursWarning.flagged.map((a, i) => (
+                    <div key={i} style={{ fontSize: 13, color: isDark ? "#fde68a" : "#78350f", fontFamily: "system-ui, -apple-system, sans-serif" }}>• {a}</div>
+                  ))}
+                </div>
+              )}
+              <p style={{ fontSize: 13, color: isDark ? "#fde68a" : "#78350f", fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: "1.6", margin: 0 }}>
+                Claiming 70+ hours/week of activities signals either dishonesty or a lack of self-awareness. Consider revising your hours to reflect realistic averages. The AI&apos;s Hours &amp; Commitment Realism section below shows the full breakdown.
+              </p>
+            </div>
+          )}
 
           {/* Per-activity cards */}
           {gradeResults.activities.map((result, i) => {

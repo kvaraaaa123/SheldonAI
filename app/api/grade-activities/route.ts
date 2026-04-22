@@ -5,7 +5,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const { activities, intendedMajors, profile, hasDefiningActivity, definingActivityDescription } = await req.json();
+    const { activities, intendedMajors, profile, hasDefiningActivity, definingActivityDescription, hoursWarning } = await req.json();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activitiesText = activities.map((a: any, i: number) => `
@@ -71,10 +71,18 @@ Return ONLY a valid JSON object with this exact structure, no other text, no mar
   ]
 }`;
 
+    const hoursContext = hoursWarning
+      ? `\n\nHOURS FLAG: The client-side checker detected ${hoursWarning.totalHours} total hours/week claimed across all activities.${hoursWarning.totalHours > 60 ? " This is CRITICAL." : " This exceeds the 50h/week recommended maximum."} ${hoursWarning.flagged?.length ? `Activities flagged for >30h/week: ${hoursWarning.flagged.join(", ")}.` : ""}`
+      : "";
+
+    const hoursSystemAddition = `
+
+HOURS REALISM ANALYSIS: You must include a dedicated section in your response called 'Hours & Commitment Realism'. For each activity, evaluate whether the claimed hours per week and weeks per year are realistic and internally consistent. Then calculate the TOTAL hours per week across all activities. If total weekly hours exceed 50, flag this prominently as a RED FLAG — admissions officers know a student cannot sustainably do more than 50 hours/week of structured activities. If total exceeds 60, flag as CRITICAL. Show your math clearly: list each activity with its claimed hours, show the sum, and explain what a realistic revision would look like. Be specific: if a student claims 20h/week for debate + 20h/week for research + 20h/week for sports, the total is 60h which is physically impossible to sustain alongside school. This section should come BEFORE the individual activity grades.`;
+
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 4000,
-      system: systemPrompt + definingContext,
+      system: systemPrompt + hoursSystemAddition + definingContext + hoursContext,
       messages: [{ role: "user", content: userMessage }],
     });
 

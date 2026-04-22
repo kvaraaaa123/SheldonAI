@@ -83,6 +83,9 @@ type ProfileData = {
   common_misconception: string | null;
   embarrassing_pride: string | null;
   guaranteed_success: string | null;
+  second_citizenship_country: string | null;
+  unique_personal_trait: string | null;
+  anything_else: string | null;
 };
 
 type Answers = {
@@ -140,6 +143,9 @@ type Answers = {
   common_misconception: string;
   embarrassing_pride: string;
   guaranteed_success: string;
+  second_citizenship_country: string;
+  unique_personal_trait: string;
+  anything_else: string;
 };
 
 type AnalysisResult = {
@@ -183,6 +189,7 @@ const EMPTY: Answers = {
   us_citizenship: "", us_resident_state: "",
   friday_night: "", obsession_topic: "", self_taught: "",
   common_misconception: "", embarrassing_pride: "", guaranteed_success: "",
+  second_citizenship_country: "", unique_personal_trait: "", anything_else: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -347,10 +354,10 @@ const GROUP_TITLES = [
   "Your high school",
   "Your activities",
   "How you think",
-  "Test scores",
+  "Standardized Testing",
   "Where you're from",
   "College preferences",
-  "Testing & Language",
+  "International status",
   "The stuff that makes you, you",
 ];
 
@@ -420,6 +427,9 @@ function profileToAnswers(p: ProfileData): Answers {
     common_misconception: p.common_misconception ?? "",
     embarrassing_pride: p.embarrassing_pride ?? "",
     guaranteed_success: p.guaranteed_success ?? "",
+    second_citizenship_country: p.second_citizenship_country ?? "",
+    unique_personal_trait: p.unique_personal_trait ?? "",
+    anything_else: p.anything_else ?? "",
   };
 }
 
@@ -499,6 +509,9 @@ export default function ProfilePage() {
   const [hsOpen,      setHsOpen]      = useState(false);
   const [countryOpen, setCountryOpen] = useState(false);
   const [stateOpen,   setStateOpen]   = useState(false);
+
+  // Inline error state
+  const [saveError, setSaveError] = useState("");
 
   // View/edit state
   const [editingSection, setEditingSection] = useState<number | null>(null);
@@ -589,6 +602,85 @@ export default function ProfilePage() {
       const arr = prev[field] as string[];
       return { ...prev, [field]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
     });
+  }
+
+  function toggleSchoolType(opt: string) {
+    setAnswers(prev => {
+      const cur = prev.school_type ? prev.school_type.split(",").map(s => s.trim()).filter(Boolean) : [];
+      if (opt === "All of the above") {
+        return { ...prev, school_type: cur.includes("All of the above") ? "" : "All of the above" };
+      }
+      const withoutAll = cur.filter(s => s !== "All of the above");
+      const next = withoutAll.includes(opt) ? withoutAll.filter(s => s !== opt) : [...withoutAll, opt];
+      return { ...prev, school_type: next.join(", ") };
+    });
+  }
+
+  function toggleCampusEnv(opt: string) {
+    setAnswers(prev => {
+      const cur = prev.campus_environment ? prev.campus_environment.split(",").map(s => s.trim()).filter(Boolean) : [];
+      if (opt === "All of the above") {
+        return { ...prev, campus_environment: cur.includes("All of the above") ? "" : "All of the above" };
+      }
+      const withoutAll = cur.filter(s => s !== "All of the above");
+      const next = withoutAll.includes(opt) ? withoutAll.filter(s => s !== opt) : [...withoutAll, opt];
+      return { ...prev, campus_environment: next.join(", ") };
+    });
+  }
+
+  const SOCIAL_OPPOSITES: [string, string][] = [["Greek life active", "No Greek life"]];
+
+  function toggleSocialCulture(opt: string) {
+    setAnswers(prev => {
+      const cur = prev.social_culture ? prev.social_culture.split(",").map(s => s.trim()).filter(Boolean) : [];
+      if (opt === "No preference") {
+        return { ...prev, social_culture: cur.includes("No preference") ? "" : "No preference" };
+      }
+      if (cur.includes("No preference")) return prev;
+      const opposite = SOCIAL_OPPOSITES.find(([a, b]) => a === opt ? b : b === opt ? a : null);
+      const opp = opposite ? (opposite[0] === opt ? opposite[1] : opposite[0]) : null;
+      const withoutOpp = opp ? cur.filter(s => s !== opp) : cur;
+      const next = withoutOpp.includes(opt) ? withoutOpp.filter(s => s !== opt) : [...withoutOpp, opt];
+      return { ...prev, social_culture: next.join(", ") };
+    });
+  }
+
+  function isMultiSelected(field: keyof Answers, opt: string): boolean {
+    const val = answers[field] as string;
+    if (!val) return false;
+    return val.split(",").map(s => s.trim()).includes(opt);
+  }
+
+  function renderMultiSelectPills(
+    options: string[],
+    selected: string,
+    toggle: (opt: string) => void,
+  ) {
+    const sel = selected ? selected.split(",").map(s => s.trim()).filter(Boolean) : [];
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map(opt => {
+          const isSelected = sel.includes(opt);
+          return (
+            <button key={opt} type="button" onClick={() => toggle(opt)}
+              style={{
+                display: "inline-flex", alignItems: "center", borderRadius: 999,
+                padding: "7px 16px", fontSize: 13,
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontWeight: 400, lineHeight: "1.4",
+                borderStyle: "solid", borderWidth: "0.5px",
+                borderColor: isSelected ? gold : pillBorder,
+                backgroundColor: isSelected ? (isDark ? "rgba(201,169,110,0.12)" : "rgba(154,112,64,0.10)") : (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"),
+                color: isSelected ? gold : pillText,
+                cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s, color 0.15s",
+                outline: "none", whiteSpace: "nowrap",
+                WebkitAppearance: "none", appearance: "none",
+              }}
+            >{opt}</button>
+          );
+        })}
+      </div>
+    );
   }
 
   function updateActivity(index: number, key: keyof Activity, value: string | boolean) {
@@ -690,6 +782,9 @@ export default function ProfilePage() {
       common_misconception: answers.common_misconception || null,
       embarrassing_pride: answers.embarrassing_pride || null,
       guaranteed_success: answers.guaranteed_success || null,
+      second_citizenship_country: answers.second_citizenship_country || null,
+      unique_personal_trait: answers.unique_personal_trait || null,
+      anything_else: answers.anything_else || null,
     };
 
     const sessionResult = await supabase.auth.getSession();
@@ -706,11 +801,17 @@ export default function ProfilePage() {
     console.log("Upsert result:", upsertError);
 
     if (!upsertError) {
+      setSaveError("");
       setProfileData({ user_id: uid, ...formData, onboarding_complete: true } as unknown as ProfileData);
       setCurrentGroup(0);
       setMode("view");
     } else {
-      alert("Error saving profile: " + upsertError.message);
+      const msg = upsertError.message || "";
+      if (msg.includes("column") && msg.includes("schema cache")) {
+        setSaveError("Some fields couldn't be saved — please refresh and try again.");
+      } else {
+        setSaveError("Error saving profile: " + msg);
+      }
     }
   }
 
@@ -731,8 +832,14 @@ export default function ProfilePage() {
         return { activities: clean.length > 0 ? clean : null };
       }
       case 5: return { changed_mind: answers.changed_mind || null, meaningful_influence: answers.meaningful_influence || null, world_problem: answers.world_problem || null };
-      case 6: return { sat_math: answers.sat_math ? parseInt(answers.sat_math) : null, sat_english: answers.sat_english ? parseInt(answers.sat_english) : null, act: answers.act ? parseInt(answers.act) : null };
-      case 7: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, country: answers.country || null, phone: answers.phone || null };
+      case 6: return {
+        sat_math: answers.sat_math ? parseInt(answers.sat_math) : null,
+        sat_english: answers.sat_english ? parseInt(answers.sat_english) : null,
+        act: answers.act ? parseInt(answers.act) : null,
+        english_test_type: answers.english_test_type || null,
+        english_test_score: answers.english_test_score ? parseFloat(answers.english_test_score) : null,
+      };
+      case 7: return { us_citizenship: answers.us_citizenship || null, us_resident_state: answers.us_resident_state || null, second_citizenship_country: answers.second_citizenship_country || null, country: answers.country || null, phone: answers.phone || null };
       case 8: return {
         campus_environment: answers.campus_environment || null,
         campus_size: answers.campus_size || null,
@@ -755,6 +862,12 @@ export default function ProfilePage() {
         common_misconception: answers.common_misconception || null,
         embarrassing_pride: answers.embarrassing_pride || null,
         guaranteed_success: answers.guaranteed_success || null,
+        private_passion: answers.private_passion || null,
+        unusual_trait: answers.unusual_trait || null,
+        changed_mind: answers.changed_mind || null,
+        meaningful_influence: answers.meaningful_influence || null,
+        unique_personal_trait: answers.unique_personal_trait || null,
+        anything_else: answers.anything_else || null,
       };
       default: return {};
     }
@@ -1234,17 +1347,19 @@ export default function ProfilePage() {
                 >+</button>
               </div>
             )}
+            {/* PDF Import Banner — Change 1 */}
             <div style={{ marginTop: 24, borderTop: `0.5px solid ${border}`, paddingTop: 20 }}>
-              <button type="button" onClick={() => setShowSecondaryUpload(v => !v)}
-                style={{ fontSize: 13, color: muted, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 16, lineHeight: 1 }}>{showSecondaryUpload ? "▾" : "▸"}</span>
-                Have a Common App activities PDF? Import it to fill these in automatically
-              </button>
-              {showSecondaryUpload && (
-                <div style={{ marginTop: 16, border: `0.5px solid ${border}`, borderRadius: 10, padding: "16px 18px" }}>
-                  <div style={{ fontSize: 12, color: muted, marginBottom: 14, lineHeight: 1.6, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                    Export your activities from Common App: Log in → go to Activities section → print/save as PDF. Upload it below and your activities will be imported automatically.
-                  </div>
+              <div style={{ background: "rgba(154,112,64,0.08)", border: "1px solid rgba(154,112,64,0.35)", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a7040" strokeWidth="1.8" style={{ flexShrink: 0 }}>
+                  <polyline points="16 16 12 12 8 16" />
+                  <line x1="12" y1="12" x2="12" y2="21" />
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                </svg>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#0a0a12", marginBottom: 3, fontFamily: "system-ui, -apple-system, sans-serif" }}>Import from Common App</div>
+                  <div style={{ fontSize: 12, color: "rgba(10,10,18,0.5)", fontFamily: "system-ui, -apple-system, sans-serif" }}>Upload your CommonApp PDF to auto-fill your activities instantly</div>
+                </div>
+                <div>
                   <input ref={secondaryFileRef} type="file" accept="application/pdf" multiple style={{ display: "none" }}
                     onChange={async e => {
                       if (!e.target.files) return;
@@ -1263,13 +1378,13 @@ export default function ProfilePage() {
                     }} />
                   {secondaryFiles.length === 0 ? (
                     <button type="button" onClick={() => secondaryFileRef.current?.click()}
-                      style={{ fontSize: 13, color: gold, background: "transparent", border: `0.5px solid ${gold}`, borderRadius: 7, padding: "7px 16px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
-                      Browse PDF…
+                      style={{ fontSize: 13, color: "#9a7040", background: "transparent", border: "1px solid #9a7040", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 500, WebkitAppearance: "none", appearance: "none", whiteSpace: "nowrap" }}>
+                      Browse PDF
                     </button>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                      <div style={{ fontSize: 13, color: text, fontFamily: "system-ui, -apple-system, sans-serif" }}>{secondaryFiles[0].name}</div>
-                      <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, alignItems: "flex-end" }}>
+                      <div style={{ fontSize: 12, color: text, fontFamily: "system-ui, -apple-system, sans-serif", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{secondaryFiles[0].name}</div>
+                      <div style={{ display: "flex", gap: 8 }}>
                         <button type="button" disabled={secondaryUploading} onClick={async () => {
                           setSecondaryUploading(true);
                           try {
@@ -1289,20 +1404,19 @@ export default function ProfilePage() {
                           } catch { /* silently fail */ }
                           setSecondaryUploading(false);
                           setSecondaryFiles([]);
-                          setShowSecondaryUpload(false);
                         }}
-                          style={{ fontSize: 13, color: isDark ? "#080810" : "#FAFAF5", background: gold, border: "none", borderRadius: 7, padding: "7px 16px", cursor: secondaryUploading ? "not-allowed" : "pointer", opacity: secondaryUploading ? 0.7 : 1, fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
-                          {secondaryUploading ? "Importing…" : "Import activities →"}
+                          style={{ fontSize: 12, color: isDark ? "#080810" : "#FAFAF5", background: "#9a7040", border: "none", borderRadius: 7, padding: "6px 14px", cursor: secondaryUploading ? "not-allowed" : "pointer", opacity: secondaryUploading ? 0.7 : 1, fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                          {secondaryUploading ? "Importing…" : "Import →"}
                         </button>
                         <button type="button" onClick={() => setSecondaryFiles([])}
-                          style={{ fontSize: 13, color: muted, background: "transparent", border: `0.5px solid ${border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                          style={{ fontSize: 12, color: muted, background: "transparent", border: `0.5px solid ${border}`, borderRadius: 7, padding: "6px 10px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
                           Remove
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         );
@@ -1310,6 +1424,18 @@ export default function ProfilePage() {
       case 5:
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+            {/* Optional personality banner */}
+            <div style={{ border: "1px solid rgba(154,112,64,0.25)", background: "rgba(154,112,64,0.04)", borderRadius: 12, padding: "16px 20px", marginBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <span style={{ fontSize: 18, color: "#9a7040", lineHeight: 1.3 }}>★</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#9a7040", marginBottom: 6, fontFamily: "system-ui, -apple-system, sans-serif" }}>This section is optional</div>
+                  <div style={{ fontSize: 12, color: muted, lineHeight: 1.65, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    These questions help SheldonAI understand you as a person — not just a student. Your answers are used to generate essay angles, make your application feel distinctly human, and surface moments from your life that admissions officers actually remember. You don&apos;t need to answer all of them. Even one honest answer helps. The stranger and more specific, the better.
+                  </div>
+                </div>
+              </div>
+            </div>
             <div>
               {renderLabel("Tell us about a time you completely changed your mind about something important.")}
               <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
@@ -1349,30 +1475,70 @@ export default function ProfilePage() {
                 {answers.world_problem.length}/500
               </div>
             </div>
+            <div>
+              {renderLabel("What's something about you that would never appear on your activities list?")}
+              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
+                This is for things that are too weird, too personal, too niche, or too non-academic to go anywhere else — but that make you genuinely you. These are often the most memorable details in an application.
+              </div>
+              <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
+                placeholder="e.g. I've been doing my family's taxes since I was 14. I collect ceramic frogs from every country I visit. I can identify any bird by its call..."
+                value={answers.unique_personal_trait}
+                onChange={e => setA("unique_personal_trait", e.target.value)} />
+              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                {answers.unique_personal_trait.length}/400
+              </div>
+            </div>
           </div>
         );
 
       case 6:
         return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, color: text }}>
-            {[
-              { label: "SAT Math", field: "sat_math" as keyof Answers, skipped: satMathSkipped, setSkipped: setSatMathSkipped, min: 200, max: 800, placeholder: "e.g. 750" },
-              { label: "SAT Reading/Writing", field: "sat_english" as keyof Answers, skipped: satRWSkipped, setSkipped: setSatRWSkipped, min: 200, max: 800, placeholder: "e.g. 750" },
-              { label: "ACT Composite", field: "act" as keyof Answers, skipped: actSkipped, setSkipped: setActSkipped, min: 1, max: 36, placeholder: "e.g. 33" },
-            ].map(({ label, field, skipped, setSkipped, min, max, placeholder }) => (
-              <div key={field}>
-                {renderLabel(label)}
-                <input style={{ ...inputStyle, opacity: skipped ? 0.4 : 1 }}
-                  type="number" min={min} max={max} placeholder={placeholder}
-                  value={answers[field] as string} disabled={skipped}
-                  onChange={e => setA(field, e.target.value)} />
-                <button type="button"
-                  onClick={() => { if (skipped) setSkipped(false); else { setSkipped(true); setA(field, ""); } }}
-                  style={{ backgroundColor: "transparent", borderWidth: 0, cursor: "pointer", fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, marginTop: 6, padding: 0, display: "block" }}>
-                  {skipped ? "Undo skip" : "Skip if not taken"}
-                </button>
+          <div style={{ color: text }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: "0 24px" }}>
+              {/* Left: US tests */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>U.S. Tests</div>
+                {[
+                  { label: "SAT Math", field: "sat_math" as keyof Answers, skipped: satMathSkipped, setSkipped: setSatMathSkipped, min: 200, max: 800, placeholder: "e.g. 750" },
+                  { label: "SAT Reading/Writing", field: "sat_english" as keyof Answers, skipped: satRWSkipped, setSkipped: setSatRWSkipped, min: 200, max: 800, placeholder: "e.g. 750" },
+                  { label: "ACT Composite", field: "act" as keyof Answers, skipped: actSkipped, setSkipped: setActSkipped, min: 1, max: 36, placeholder: "e.g. 33" },
+                ].map(({ label, field, skipped, setSkipped, min, max, placeholder }) => (
+                  <div key={field}>
+                    {renderLabel(label)}
+                    <input style={{ ...inputStyle, opacity: skipped ? 0.4 : 1 }}
+                      type="number" min={min} max={max} placeholder={placeholder}
+                      value={answers[field] as string} disabled={skipped}
+                      onChange={e => setA(field, e.target.value)} />
+                    <button type="button"
+                      onClick={() => { if (skipped) setSkipped(false); else { setSkipped(true); setA(field, ""); } }}
+                      style={{ backgroundColor: "transparent", borderWidth: 0, cursor: "pointer", fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, marginTop: 6, padding: 0, display: "block" }}>
+                      {skipped ? "Undo skip" : "Skip if not taken"}
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+              {/* Divider */}
+              <div style={{ background: border, width: 1 }} />
+              {/* Right: English proficiency */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: gold, marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>English Proficiency (International)</div>
+                <div>
+                  {renderLabel("Test type")}
+                  {renderPills("english_test_type", ["TOEFL iBT", "IELTS Academic", "Duolingo English Test", "Not yet", "Not required"])}
+                </div>
+                {(answers.english_test_type === "TOEFL iBT" || answers.english_test_type === "IELTS Academic" || answers.english_test_type === "Duolingo English Test") && (
+                  <div>
+                    {renderLabel("Score")}
+                    <input style={inputStyle} type="number" placeholder="Enter score"
+                      value={answers.english_test_score}
+                      onChange={e => setA("english_test_score", e.target.value)} />
+                  </div>
+                )}
+                <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: muted, lineHeight: 1.6, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  Only complete this section if English is not your first language or your school requires it.
+                </div>
+              </div>
+            </div>
           </div>
         );
 
@@ -1393,6 +1559,19 @@ export default function ProfilePage() {
                 >
                   <option value="">Select a state…</option>
                   {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+            {answers.us_citizenship === "Dual citizen" && (
+              <div>
+                {renderLabel("Second citizenship country")}
+                <select
+                  value={answers.second_citizenship_country}
+                  onChange={e => setA("second_citizenship_country", e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  <option value="">Select country…</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             )}
@@ -1429,24 +1608,36 @@ export default function ProfilePage() {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             <div>
-              {renderLabel("Campus environment")}
-              {renderPills("campus_environment", ["Urban city", "College town", "Suburban", "Rural", "No preference"])}
+              {renderLabel("Campus environment (select all that apply)")}
+              {renderMultiSelectPills(
+                ["Urban city", "College town", "Suburban", "Rural", "All of the above"],
+                answers.campus_environment,
+                toggleCampusEnv,
+              )}
             </div>
             <div>
               {renderLabel("Campus size")}
               {renderPills("campus_size", ["Small (under 3,000)", "Medium (3,000–10,000)", "Large (10,000–20,000)", "Very large (20,000+)", "No preference"])}
             </div>
             <div>
-              {renderLabel("Type of school")}
-              {renderPills("school_type", ["Private university", "Public university", "Liberal arts college", "Research university", "No preference"])}
+              {renderLabel("Type of school (select all that apply)")}
+              {renderMultiSelectPills(
+                ["Public", "Private", "Liberal Arts", "Research University", "Technical / STEM", "All of the above"],
+                answers.school_type,
+                toggleSchoolType,
+              )}
             </div>
             <div>
               {renderLabel("Distance from home")}
               {renderPills("distance_preference", ["Close (under 2 hrs)", "Moderate (2–5 hrs)", "Far (5+ hrs)", "No preference"])}
             </div>
             <div>
-              {renderLabel("Social culture")}
-              {renderPills("social_culture", ["Greek life active", "No Greek life", "Division I sports", "Quiet academic", "Artsy and creative", "No preference"])}
+              {renderLabel("Social culture (select all that apply)")}
+              {renderMultiSelectPills(
+                ["Greek life active", "No Greek life", "Division I sports", "Quiet academic", "Artsy and creative", "No preference"],
+                answers.social_culture,
+                toggleSocialCulture,
+              )}
             </div>
             <div>
               {renderLabel("Academic intensity")}
@@ -1458,7 +1649,7 @@ export default function ProfilePage() {
             </div>
             <div>
               {renderLabel("Financial aid need")}
-              {renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "No preference"])}
+              {renderPills("financial_aid_need", ["Need full aid", "Need partial aid", "Full pay", "Unsure"])}
             </div>
           </div>
         );
@@ -1475,75 +1666,14 @@ export default function ProfilePage() {
               {renderLabel("Are you an international student?")}
               {renderPills("is_international", ["Yes", "No"])}
             </div>
-
+            {answers.is_international === "No" && (
+              <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.6 }}>
+                Your SAT/ACT and English test info was collected in the previous step.
+              </div>
+            )}
             {answers.is_international === "Yes" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  {renderLabel("Have you taken an English proficiency test?")}
-                  {renderPills("english_test_type", ["TOEFL iBT", "IELTS Academic", "Duolingo English Test", "Not yet", "Not required for my target schools"])}
-                </div>
-
-                {answers.english_test_type === "TOEFL iBT" && (
-                  <div>
-                    {renderLabel("TOEFL iBT Score")}
-                    <input
-                      type="number" min={0} max={120} step={1}
-                      placeholder="e.g. 105"
-                      value={answers.english_test_score}
-                      onChange={e => setA("english_test_score", e.target.value)}
-                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
-                    />
-                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most top universities require 100+ for TOEFL iBT. Harvard, Yale, Princeton require 100. MIT requires 90.</div>
-                  </div>
-                )}
-
-                {answers.english_test_type === "IELTS Academic" && (
-                  <div>
-                    {renderLabel("IELTS Band Score")}
-                    <input
-                      type="number" min={0} max={9} step={0.5}
-                      placeholder="e.g. 7.5"
-                      value={answers.english_test_score}
-                      onChange={e => setA("english_test_score", e.target.value)}
-                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
-                    />
-                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most top universities require 7.0+. Harvard and Yale require 7.0. Some schools accept 6.5.</div>
-                  </div>
-                )}
-
-                {answers.english_test_type === "Duolingo English Test" && (
-                  <div>
-                    {renderLabel("Duolingo English Test Score")}
-                    <input
-                      type="number" min={10} max={160}
-                      placeholder="e.g. 130"
-                      value={answers.english_test_score}
-                      onChange={e => setA("english_test_score", e.target.value)}
-                      style={{ width: "100%", background: surface, border: `0.5px solid ${border}`, borderRadius: 8, padding: "9px 12px", fontSize: 14, color: text, outline: "none", boxSizing: "border-box" as const }}
-                    />
-                    <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Most universities that accept Duolingo require 120+.</div>
-                  </div>
-                )}
-
-                {answers.english_test_type === "Not yet" && (
-                  <div style={{
-                    background: isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.07)",
-                    border: `0.5px solid ${gold}55`, borderRadius: 8, padding: "12px 14px",
-                    fontSize: 13, color: muted, lineHeight: 1.6,
-                  }}>
-                    You will need to register and take a test before applying. TOEFL and IELTS are the most widely accepted. Register at ets.org (TOEFL) or ielts.org (IELTS).
-                  </div>
-                )}
-
-                {answers.english_test_type === "Not required for my target schools" && (
-                  <div style={{
-                    background: isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.07)",
-                    border: `0.5px solid ${gold}55`, borderRadius: 8, padding: "12px 14px",
-                    fontSize: 13, color: muted, lineHeight: 1.6,
-                  }}>
-                    Note: Verify this with each school on your list. Most US universities require proof of English proficiency for students from non-English-primary countries.
-                  </div>
-                )}
+              <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.6 }}>
+                Your English proficiency test details were collected in the Standardized Testing step. Proceed to continue.
               </div>
             )}
           </div>
@@ -1554,25 +1684,55 @@ export default function ProfilePage() {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
             {[
-              { label: "What do you do at 11pm on a free Friday?", field: "friday_night" as keyof Answers, placeholder: "e.g. I rewatch the same three documentary series and reorganize my bookshelf..." },
-              { label: "What could you talk about for three hours without preparing?", field: "obsession_topic" as keyof Answers, placeholder: "e.g. The geopolitics of water rights in Central Asia..." },
-              { label: "What have you taught yourself that nobody asked you to learn?", field: "self_taught" as keyof Answers, placeholder: "e.g. I taught myself to read Ottoman Turkish to understand my great-grandmother's letters..." },
-              { label: "What do most people get completely wrong about something you know well?", field: "common_misconception" as keyof Answers, placeholder: "e.g. People think being good at math means being fast. It means being comfortable being stuck..." },
-              { label: "What is the most embarrassing thing you are genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation on Earth..." },
-              { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure and fix it..." },
-            ].map(({ label, field, placeholder }) => (
+              { label: "What do you do at 11pm on a free Friday?", field: "friday_night" as keyof Answers, placeholder: "e.g. I rewatch the same three documentary series and reorganize my bookshelf...", max: 300 },
+              { label: "What could you talk about for three hours without preparing?", field: "obsession_topic" as keyof Answers, placeholder: "e.g. The geopolitics of water rights in Central Asia...", max: 300 },
+              { label: "What have you taught yourself that nobody asked you to learn?", field: "self_taught" as keyof Answers, placeholder: "e.g. I taught myself to read Ottoman Turkish to understand my great-grandmother's letters...", max: 300 },
+              { label: "What do most people get completely wrong about something you know well?", field: "common_misconception" as keyof Answers, placeholder: "e.g. People think being good at math means being fast. It means being comfortable being stuck...", max: 300 },
+              { label: "What is the most embarrassing thing you are genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation on Earth...", max: 300 },
+              { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure and fix it...", max: 300 },
+            ].map(({ label, field, placeholder, max }) => (
               <div key={field}>
                 {renderLabel(label)}
-                <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={300}
+                <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={max}
                   placeholder={placeholder}
                   value={answers[field] as string}
                   onChange={e => setA(field, e.target.value)} />
                 <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                  {(answers[field] as string).length}/300
+                  {(answers[field] as string).length}/{max}
                 </div>
               </div>
             ))}
-            <div style={{ borderLeft: `3px solid ${gold}`, paddingLeft: 14, marginTop: 4 }}>
+
+            {/* Optional section divider */}
+            <div style={{ borderTop: `1px solid ${border}`, paddingTop: 28, marginTop: 8 }}>
+              <div style={{ border: "1px solid rgba(154,112,64,0.25)", background: "rgba(154,112,64,0.04)", borderRadius: 12, padding: "16px 20px", marginBottom: 28 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: gold, marginBottom: 6, fontFamily: "system-ui, -apple-system, sans-serif" }}>One Last Thing (Optional)</div>
+                <div style={{ fontSize: 12, color: muted, lineHeight: 1.65, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  Everything below is completely optional. These questions exist for one reason: the more SheldonAI knows about the real you — not just your grades and clubs — the better it can package your application, generate essay angles, and make your story feel human and memorable. Answer none, one, or all. There are no wrong answers.
+                </div>
+              </div>
+              {[
+                { label: "What do you do when nobody is watching?", field: "private_passion" as keyof Answers, placeholder: "e.g. I rewrite Wikipedia articles I think are wrong. I make elaborate playlists for moods that don't have names..." },
+                { label: "Is there anything about you that would surprise people who know you well?", field: "unusual_trait" as keyof Answers, placeholder: "e.g. I have a second life as a competitive crossword puzzle writer..." },
+                { label: "Who or what has influenced the way you think most?", field: "meaningful_influence" as keyof Answers, placeholder: "e.g. My grandfather's stories about working as a translator during the Cold War..." },
+                { label: "What's the most embarrassing thing you're genuinely proud of?", field: "embarrassing_pride" as keyof Answers, placeholder: "e.g. I have memorized the capital cities of every sovereign nation on Earth...", skipIfAlready: true },
+                { label: "What problem would you work on if success was guaranteed?", field: "guaranteed_success" as keyof Answers, placeholder: "e.g. I would figure out why teenagers stop reading for pleasure...", skipIfAlready: true },
+                { label: "Anything else? What's something about you that doesn't fit anywhere else — too strange, too personal, too niche — but feels important?", field: "anything_else" as keyof Answers, placeholder: "This is a free space. Write whatever you want." },
+              ].filter(q => !("skipIfAlready" in q && q.skipIfAlready)).map(({ label, field, placeholder }) => (
+                <div key={field} style={{ marginBottom: 24 }}>
+                  {renderLabel(label)}
+                  <textarea style={{ ...textareaStyle, height: 100 }} rows={4} maxLength={400}
+                    placeholder={placeholder}
+                    value={answers[field] as string}
+                    onChange={e => setA(field, e.target.value)} />
+                  <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    {(answers[field] as string).length}/400
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderLeft: `3px solid ${gold}`, paddingLeft: 14 }}>
               <p style={{ fontSize: 12, color: muted, lineHeight: 1.65, margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
                 SheldonAI uses these answers to find essay angles that are genuinely surprising — the kind admissions officers remember. You are not being judged on how impressive these sound. The stranger and more honest, the more useful.
               </p>
@@ -2310,13 +2470,26 @@ export default function ProfilePage() {
         <div style={{ height: "100%", width: `${progressPct}%`, backgroundColor: gold, transition: "width 400ms ease" }} />
       </div>
 
-      {/* Step indicator */}
-      <div style={{ position: "fixed", top: 14, left: 0, right: 0, textAlign: "center", fontSize: 12, fontFamily: "system-ui, -apple-system, sans-serif", color: muted, zIndex: 100 }}>
-        Step {currentGroup + 1} of {TOTAL_GROUPS}
+      {/* Sticky step indicator pill */}
+      <div style={{
+        position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)", zIndex: 40,
+        background: isDark ? "#1a1a2e" : "#fff",
+        border: "0.5px solid rgba(154,112,64,0.25)", borderRadius: 999,
+        padding: "8px 20px",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+        minWidth: 140,
+      }}>
+        <div style={{ fontSize: 13, fontFamily: "system-ui, -apple-system, sans-serif", color: text, whiteSpace: "nowrap" }}>
+          Step <span style={{ fontWeight: 700, color: gold, fontSize: 15 }}>{currentGroup + 1}</span> of {TOTAL_GROUPS}
+        </div>
+        <div style={{ width: "100%", height: 3, background: border, borderRadius: 999, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${((currentGroup + 1) / TOTAL_GROUPS) * 100}%`, background: gold, borderRadius: 999, transition: "width 400ms ease" }} />
+        </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "80px 24px 40px" : "80px 24px 60px", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "flex-start" : "center", justifyContent: "center", padding: (currentGroup === 4 || currentGroup === 8 || currentGroup === 9 || currentGroup === 10) ? "132px 24px 40px" : "132px 24px 60px", width: "100%" }}>
         <div ref={groupRef} style={{ maxWidth: currentGroup === 4 ? 640 : 560, width: "100%", color: text }}>
 
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 500, color: text, textAlign: "center", marginBottom: 8, letterSpacing: "-0.2px", marginTop: 0 }}>
@@ -2346,7 +2519,12 @@ export default function ProfilePage() {
 
           {renderGroupContent()}
 
-          <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
+          {saveError && (
+            <div style={{ marginTop: 24, border: "1px solid rgba(220,38,38,0.4)", borderRadius: 10, padding: "12px 16px", background: "rgba(220,38,38,0.05)", fontSize: 13, color: isDark ? "#f87171" : "#b91c1c", fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.5 }}>
+              {saveError}
+            </div>
+          )}
+          <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
             <button type="button" onClick={goNext} disabled={isDisabled}
               onMouseEnter={e => { if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.08)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
