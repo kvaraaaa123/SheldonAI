@@ -98,6 +98,9 @@ type ProfileData = {
   first_gen: string | null;
   css_profile_aware: string | null;
   essay_topics: string | null;
+  academic_interests: string | null;
+  intended_major: string | null;
+  academic_style: string | null;
 };
 
 type Answers = {
@@ -167,6 +170,9 @@ type Answers = {
   first_gen: string;
   css_profile_aware: string;
   essay_topics: string;
+  academic_interests: string[];
+  intended_major: string;
+  academic_style: string;
 };
 
 type AnalysisResult = {
@@ -213,6 +219,7 @@ const EMPTY: Answers = {
   second_citizenship_country: "", unique_personal_trait: "", anything_else: "",
   sat_reading: "", sat_score: "", act_score: "", why_this_major: "", career_goals: "",
   family_income_bracket: "", first_gen: "", css_profile_aware: "", essay_topics: "",
+  academic_interests: [], intended_major: "", academic_style: "",
 };
 
 const ACTIVITY_TYPES: string[] = [
@@ -384,6 +391,52 @@ const OTHER_TESTS: string[] = [
   "IB Higher Level (HL)", "IB Standard Level (SL)", "Cambridge A-Level", "Other",
 ];
 
+const ACADEMIC_INTEREST_ROWS: string[][] = [
+  ["Biology", "Chemistry", "Physics", "Environmental Science", "Neuroscience", "Astronomy", "Marine Biology", "Geology"],
+  ["Mathematics", "Statistics", "Computer Science", "Artificial Intelligence", "Cybersecurity", "Data Science", "Robotics", "Game Design"],
+  ["Mechanical Engineering", "Electrical Engineering", "Civil Engineering", "Biomedical Engineering", "Aerospace Engineering", "Chemical Engineering", "Architecture"],
+  ["Psychology", "Sociology", "Anthropology", "Political Science", "International Relations", "Economics", "Philosophy", "Cognitive Science"],
+  ["English Literature", "History", "Linguistics", "Classics", "Religious Studies", "Ethics", "Cultural Studies"],
+  ["Visual Art", "Film & Media", "Music", "Theater", "Creative Writing", "Graphic Design", "Fashion", "Photography"],
+  ["Business", "Finance", "Marketing", "Law", "Medicine / Pre-med", "Public Health", "Education", "Social Work", "Public Policy"],
+  ["Sustainability", "Urban Planning", "Gender Studies", "Journalism", "Communications", "Entrepreneurship", "Global Studies"],
+];
+
+const ALL_ACADEMIC_INTERESTS: string[] = ACADEMIC_INTEREST_ROWS.flat();
+
+const MAJORS_LIST: string[] = Array.from(new Set([
+  ...ALL_ACADEMIC_INTERESTS,
+  "Aerospace Engineering", "African Studies", "Agriculture", "American Studies", "Applied Mathematics",
+  "Art History", "Biochemistry", "Bioinformatics", "Biophysics", "Business Administration",
+  "Chemical Engineering", "Civil Engineering", "Classical Studies", "Communication", "Comparative Literature",
+  "Computer Engineering", "Criminal Justice", "Dance", "Dental Medicine", "East Asian Studies",
+  "Ecology", "Economics", "Education", "Electrical Engineering", "Environmental Engineering",
+  "Film Studies", "Finance", "Fine Arts", "Forensic Science", "French",
+  "Gender Studies", "Geography", "German", "Global Health", "History of Science",
+  "Human Biology", "Human Development", "Industrial Engineering", "Information Science", "International Business",
+  "Islamic Studies", "Italian", "Jewish Studies", "Kinesiology", "Latin American Studies",
+  "Law", "Linguistics", "Management", "Marine Science", "Materials Science",
+  "Media Studies", "Medieval Studies", "Middle Eastern Studies", "Molecular Biology", "Music Composition",
+  "Music Performance", "Music Theory", "Naval Architecture", "Neuroscience", "Nuclear Engineering",
+  "Nursing", "Nutrition", "Operations Research", "Organizational Behavior", "Peace Studies",
+  "Performing Arts", "Pharmacology", "Philosophy", "Physics", "Political Economy",
+  "Pre-Law", "Pre-Med", "Psychology", "Public Administration", "Public Health",
+  "Public Policy", "Real Estate", "Religious Studies", "Russian", "Social Work",
+  "Software Engineering", "South Asian Studies", "Spanish", "Sport Management", "Statistics",
+  "Supply Chain", "Systems Engineering", "Theater", "Undecided / Exploring", "Urban Planning",
+  "Veterinary Science", "Women's Studies",
+])).sort();
+
+const ACADEMIC_STYLES: string[] = [
+  "I go deep on a few things",
+  "I'm broadly curious about everything",
+  "I love theory and ideas",
+  "I prefer hands-on and applied work",
+  "I'm driven by solving real-world problems",
+  "I thrive in creative and open-ended work",
+  "I'm most motivated by competition and performance",
+];
+
 const RESEARCH_SUBJECTS: string[] = [
   "Science", "Technology", "Engineering", "Mathematics", "Social Science",
   "Humanities", "Arts", "Business", "Medicine", "Environment", "Law", "Policy", "Other",
@@ -479,6 +532,9 @@ function profileToAnswers(p: ProfileData): Answers {
     first_gen: p.first_gen ?? "",
     css_profile_aware: p.css_profile_aware ?? "",
     essay_topics: p.essay_topics ?? "",
+    academic_interests: p.academic_interests ? p.academic_interests.split(",").map(s => s.trim()).filter(Boolean) : [],
+    intended_major: p.intended_major ?? "",
+    academic_style: p.academic_style ?? "",
   };
 }
 
@@ -562,6 +618,10 @@ export default function ProfilePage() {
   const [hsOpen,      setHsOpen]      = useState(false);
   const [countryOpen, setCountryOpen] = useState(false);
   const [stateOpen,   setStateOpen]   = useState(false);
+
+  // Major search state
+  const [majorSearchQuery,  setMajorSearchQuery]  = useState("");
+  const [majorDropdownOpen, setMajorDropdownOpen] = useState(false);
 
   // Inline error state
   const [saveError, setSaveError] = useState("");
@@ -653,7 +713,7 @@ export default function ProfilePage() {
     setAnswers(prev => ({ ...prev, [key]: val }));
   }
 
-  function toggleMulti(field: "hobbies", val: string) {
+  function toggleMulti(field: "hobbies" | "academic_interests", val: string) {
     setAnswers(prev => {
       const arr = prev[field] as string[];
       return { ...prev, [field]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
@@ -796,6 +856,9 @@ export default function ProfilePage() {
       gpa: answers.gpa ? parseFloat(answers.gpa) : null,
       class_rank: answers.class_rank || null,
       // Academics
+      academic_interests: answers.academic_interests.length > 0 ? answers.academic_interests.join(",") : null,
+      intended_major: answers.intended_major || null,
+      academic_style: answers.academic_style || null,
       passion_description: answers.passion_description || null,
       hobbies: answers.hobbies.length > 0 ? answers.hobbies : null,
       why_this_major: answers.why_this_major || null,
@@ -895,6 +958,9 @@ export default function ProfilePage() {
         class_rank: answers.class_rank || null,
       };
       case 1: return {
+        academic_interests: answers.academic_interests.length > 0 ? answers.academic_interests.join(",") : null,
+        intended_major: answers.intended_major || null,
+        academic_style: answers.academic_style || null,
         passion_description: answers.passion_description || null,
         hobbies: answers.hobbies.length > 0 ? answers.hobbies : null,
         why_this_major: answers.why_this_major || null,
@@ -1110,7 +1176,7 @@ export default function ProfilePage() {
     );
   }
 
-  function renderMultiPills(field: "hobbies", options: string[]) {
+  function renderMultiPills(field: "hobbies" | "academic_interests", options: string[]) {
     const selected = answers[field] as string[];
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1134,6 +1200,120 @@ export default function ProfilePage() {
             >{opt}</button>
           );
         })}
+      </div>
+    );
+  }
+
+  function renderGoldPills(field: "academic_interests", options: string[]) {
+    const selected = answers[field] as string[];
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map(opt => {
+          const isSelected = selected.includes(opt);
+          return (
+            <button key={opt} type="button" onClick={() => toggleMulti(field, opt)}
+              style={{
+                display: "inline-flex", alignItems: "center", borderRadius: 999,
+                padding: "7px 16px", fontSize: 13,
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontWeight: 400, lineHeight: "1.4",
+                borderStyle: "solid", borderWidth: "1px",
+                borderColor: isSelected ? gold : "rgba(0,0,0,0.1)",
+                backgroundColor: isSelected ? gold : (isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)"),
+                color: isSelected ? "#ffffff" : muted,
+                cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s, color 0.15s",
+                outline: "none", whiteSpace: "nowrap",
+                WebkitAppearance: "none", appearance: "none",
+              }}
+            >{opt}</button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderSingleSelectGoldPills(field: keyof Answers, options: string[]) {
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map(opt => {
+          const isSelected = answers[field] === opt;
+          return (
+            <button key={opt} type="button" onClick={() => setA(field, isSelected ? "" : opt)}
+              style={{
+                display: "inline-flex", alignItems: "center", borderRadius: 999,
+                padding: "7px 16px", fontSize: 13,
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontWeight: 400, lineHeight: "1.4",
+                borderStyle: "solid", borderWidth: "1px",
+                borderColor: isSelected ? gold : "rgba(0,0,0,0.1)",
+                backgroundColor: isSelected ? gold : (isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)"),
+                color: isSelected ? "#ffffff" : muted,
+                cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s, color 0.15s",
+                outline: "none", whiteSpace: "nowrap",
+                WebkitAppearance: "none", appearance: "none",
+              }}
+            >{opt}</button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderMajorDropdown() {
+    const query = majorSearchQuery.trim();
+    const filtered = query.length > 0
+      ? MAJORS_LIST.filter(m => m.toLowerCase().includes(query.toLowerCase())).slice(0, 12)
+      : [];
+    const showUseCustom = query.length > 0 && !MAJORS_LIST.some(m => m.toLowerCase() === query.toLowerCase());
+
+    return (
+      <div style={{ position: "relative" }}>
+        {answers.intended_major ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999,
+              padding: "7px 14px", fontSize: 13, backgroundColor: gold, color: "#ffffff",
+              fontFamily: "system-ui, -apple-system, sans-serif",
+            }}>
+              {answers.intended_major}
+              <button type="button" onClick={() => { setA("intended_major", ""); setMajorSearchQuery(""); }}
+                style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", padding: 0, fontSize: 15, lineHeight: 1, display: "flex", alignItems: "center" }}>×</button>
+            </span>
+          </div>
+        ) : (
+          <>
+            <input
+              style={inputStyle}
+              type="text"
+              placeholder="Type to search majors…"
+              value={majorSearchQuery}
+              onChange={e => { setMajorSearchQuery(e.target.value); setMajorDropdownOpen(true); }}
+              onFocus={() => setMajorDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setMajorDropdownOpen(false), 150)}
+            />
+            {majorDropdownOpen && (filtered.length > 0 || showUseCustom) && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
+                background: surface, border: `0.5px solid ${border}`, borderRadius: 8,
+                boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 32px rgba(0,0,0,0.12)",
+                maxHeight: 240, overflowY: "auto",
+              }}>
+                {filtered.map(m => (
+                  <button key={m} type="button" onMouseDown={e => e.preventDefault()}
+                    onClick={() => { setA("intended_major", m); setMajorSearchQuery(""); setMajorDropdownOpen(false); }}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: text, background: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif" }}
+                  >{m}</button>
+                ))}
+                {showUseCustom && (
+                  <button type="button" onMouseDown={e => e.preventDefault()}
+                    onClick={() => { setA("intended_major", majorSearchQuery.trim()); setMajorSearchQuery(""); setMajorDropdownOpen(false); }}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 14, color: gold, background: "transparent", border: "none", borderTop: `0.5px solid ${border}`, cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", fontStyle: "italic" }}
+                  >Use &ldquo;{majorSearchQuery.trim()}&rdquo;</button>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   }
@@ -1352,29 +1532,25 @@ export default function ProfilePage() {
       // ── STEP 2: Academics ──────────────────────────────────────────────────
       case 1:
         return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28, color: text }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 32, color: text }}>
             <div>
               {renderLabel("What are your main academic interests?")}
-              <div style={{ fontSize: 13, color: muted, marginBottom: 10, fontFamily: "system-ui, -apple-system, sans-serif", lineHeight: 1.55 }}>
-                Subjects, disciplines, or areas you genuinely care about — not just what looks good.
+              <div style={{ fontSize: 12, color: muted, marginBottom: 12, fontFamily: "system-ui, -apple-system, sans-serif", fontStyle: "italic" }}>
+                Select all that genuinely interest you — not just what looks good
               </div>
-              <textarea style={{ ...textareaStyle, height: 96 }} maxLength={400}
-                placeholder="e.g. I'm obsessed with the intersection of neuroscience and education — why some people learn faster and what that means for how we teach..."
-                value={answers.passion_description}
-                onChange={e => setA("passion_description", e.target.value)} />
-              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.passion_description.length}/400</div>
+              {renderGoldPills("academic_interests", ALL_ACADEMIC_INTERESTS)}
             </div>
             <div>
-              {renderLabel("What are you planning to study? (intended major)")}
-              <textarea style={{ ...textareaStyle, height: 72 }} maxLength={200}
-                placeholder="e.g. Computer Science, or somewhere between economics and public policy — I'm not sure yet..."
-                value={answers.why_this_major}
-                onChange={e => setA("why_this_major", e.target.value)} />
-              <div style={{ fontSize: 12, color: muted, textAlign: "right", marginTop: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>{answers.why_this_major.length}/200</div>
+              {renderLabel("What are you planning to study? (Intended Major)")}
+              {renderMajorDropdown()}
             </div>
             <div>
               {renderLabel("Interests & hobbies outside school")}
               {renderMultiPills("hobbies", HOBBIES)}
+            </div>
+            <div>
+              {renderLabel("How would you describe your academic style?")}
+              {renderSingleSelectGoldPills("academic_style", ACADEMIC_STYLES)}
             </div>
           </div>
         );
@@ -2667,21 +2843,29 @@ export default function ProfilePage() {
           {/* Section 2: Academics */}
           {sectionCard(1, "Academics",
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fieldRow("Academic Interests", fieldVal(answers.passion_description))}
-              {fieldRow("Intended Major", fieldVal(answers.why_this_major))}
+              {fieldRow("Academic Interests", answers.academic_interests.length > 0 ? tagsList(answers.academic_interests) : fieldVal(answers.passion_description))}
+              {fieldRow("Intended Major", fieldVal(answers.intended_major || answers.why_this_major))}
+              {fieldRow("Academic Style", fieldVal(answers.academic_style))}
               {fieldRow("Hobbies", tagsList(answers.hobbies))}
             </div>,
-            <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               <div>
                 {renderLabel("Academic interests")}
-                <textarea style={{ ...textareaStyle, height: 88 }} maxLength={400} placeholder="Subjects you genuinely care about…" value={answers.passion_description} onChange={e => setA("passion_description", e.target.value)} />
+                <div style={{ fontSize: 12, color: muted, marginBottom: 12, fontFamily: "system-ui, -apple-system, sans-serif", fontStyle: "italic" }}>
+                  Select all that genuinely interest you — not just what looks good
+                </div>
+                {renderGoldPills("academic_interests", ALL_ACADEMIC_INTERESTS)}
               </div>
               <div>
                 {renderLabel("Intended major")}
-                <textarea style={{ ...textareaStyle, height: 72 }} maxLength={200} placeholder="e.g. Computer Science, or undecided…" value={answers.why_this_major} onChange={e => setA("why_this_major", e.target.value)} />
+                {renderMajorDropdown()}
               </div>
               <div>{renderLabel("Hobbies")}{renderMultiPills("hobbies", HOBBIES)}</div>
-            </>
+              <div>
+                {renderLabel("Academic style")}
+                {renderSingleSelectGoldPills("academic_style", ACADEMIC_STYLES)}
+              </div>
+            </div>
           )}
 
           {/* Section 3: Activities */}
