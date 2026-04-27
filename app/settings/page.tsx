@@ -78,14 +78,6 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function handleRoleSwitch() {
-    const newRole = currentRole === "student" ? "counselor" : "student";
-    await supabase.from("profiles").update({ role: newRole, updated_at: new Date().toISOString() }).eq("user_id", userId);
-    setCurrentRole(newRole);
-    setShowRoleConfirm(false);
-    router.push(newRole === "counselor" ? "/counselor/dashboard" : "/dashboard");
-  }
-
   async function handleDeleteAccount() {
     if (deleteInput !== "DELETE") return;
     await supabase.from("profiles").delete().eq("user_id", userId);
@@ -333,49 +325,42 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Section 6 — Account Type */}
-        <div style={{ ...card, gap: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: text }}>Account Type</div>
-
-          <div>
-            <div style={{ fontSize: 13, color: muted, marginBottom: 10 }}>Your account type</div>
-            <span style={{
-              display: "inline-block", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500,
-              background: currentRole === "counselor"
-                ? (isDark ? "rgba(201,169,110,0.15)" : "rgba(154,112,64,0.10)")
-                : (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"),
-              color: currentRole === "counselor" ? gold : muted,
-              border: `0.5px solid ${currentRole === "counselor" ? gold : (isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)")}`,
-            }}>
-              {currentRole === "counselor" ? "Counselor" : "Student"}
+        {/* ACCOUNT TYPE — subtle, bottom of settings */}
+        <div style={{ marginTop: 48, paddingTop: 24, borderTop: '0.5px solid rgba(0,0,0,0.07)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(10,10,18,0.3)', marginBottom: 12 }}>
+            Account Type
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(10,10,18,0.45)', marginBottom: 8 }}>
+            You are currently signed in as a{' '}
+            <span style={{ background: currentRole === 'counselor' ? 'rgba(154,112,64,0.1)' : 'rgba(0,0,0,0.06)', color: currentRole === 'counselor' ? '#7a5230' : 'rgba(10,10,18,0.5)', padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 500 }}>
+              {currentRole || 'student'}
             </span>
           </div>
-
           {!showRoleConfirm ? (
             <button
               onClick={() => setShowRoleConfirm(true)}
-              style={{ fontSize: 12, color: muted, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "system-ui, sans-serif", textAlign: "left" }}
+              style={{ fontSize: 12, color: 'rgba(10,10,18,0.35)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
             >
-              Switch to {currentRole === "counselor" ? "Student" : "Counselor"}
+              Switch to {currentRole === 'counselor' ? 'Student' : 'Counselor'} account
             </button>
           ) : (
-            <div style={{ borderTop: `0.5px solid ${border}`, paddingTop: 14 }}>
-              <div style={{ fontSize: 13, color: muted, marginBottom: 12, lineHeight: 1.6 }}>
-                Are you sure? This will change how SheldonAI works for you.
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={handleRoleSwitch} style={{
-                  fontSize: 12, color: gold, background: "transparent",
-                  border: `0.5px solid ${gold}`, borderRadius: 7, padding: "6px 14px",
-                  cursor: "pointer", fontFamily: "system-ui, sans-serif",
-                }}>
+            <div style={{ fontSize: 13, color: 'rgba(10,10,18,0.5)' }}>
+              <div style={{ marginBottom: 8 }}>Are you sure? This changes how SheldonAI works for you.</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={async () => {
+                    const newRole = currentRole === 'counselor' ? 'student' : 'counselor'
+                    await supabase.from('profiles').update({ role: newRole }).eq('user_id', userId)
+                    router.push(newRole === 'counselor' ? '/counselor/dashboard' : '/dashboard')
+                  }}
+                  style={{ fontSize: 12, color: '#9a7040', background: 'none', border: '1px solid rgba(154,112,64,0.3)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}
+                >
                   Confirm
                 </button>
-                <button onClick={() => setShowRoleConfirm(false)} style={{
-                  fontSize: 12, color: muted, background: "transparent",
-                  border: `0.5px solid ${border}`, borderRadius: 7, padding: "6px 14px",
-                  cursor: "pointer", fontFamily: "system-ui, sans-serif",
-                }}>
+                <button
+                  onClick={() => setShowRoleConfirm(false)}
+                  style={{ fontSize: 12, color: 'rgba(10,10,18,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
                   Cancel
                 </button>
               </div>
