@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { AnnotatedSentence } from "@/components/AnnotatedSentence";
 import { EssayChat } from "@/components/EssayChat";
@@ -536,9 +537,9 @@ export default function AnnotatePage() {
           <a href="/dashboard" className="text-[12px] transition-colors" style={{ color: muted, textDecoration: "none" }}>
             ← Dashboard
           </a>
-          <a href="/" className="text-lg font-bold tracking-tight font-serif" style={{ color: text, letterSpacing: "-0.02em" }}>
+          <Link href="/" className="text-lg font-bold tracking-tight font-serif" style={{ color: text, letterSpacing: "-0.02em" }}>
             Sheldon<span style={{ color: gold }}>AI</span>
-          </a>
+          </Link>
         </div>
 
         <div className="flex items-center gap-4">

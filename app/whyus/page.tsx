@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/context/ThemeContext";
 import { UNIVERSITY_PROMPTS, University, Prompt } from "@/lib/universityPrompts";
@@ -245,9 +246,9 @@ export default function WhyUsPage() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <a href="/dashboard" style={{ fontSize: 13, color: muted, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>← Dashboard</a>
-          <a href="/annotate" style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 500, textDecoration: "none", color: text }}>
+          <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 500, textDecoration: "none", color: text }}>
             Sheldon<span style={{ color: gold }}>AI</span>
-          </a>
+          </Link>
           <div style={{ display: "flex", gap: 4 }}>
             {[
               { label: "Personal Statement", href: "/annotate?tab=personal" },

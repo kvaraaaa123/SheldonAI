@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 
@@ -294,7 +295,7 @@ export default function ActivitiesPage() {
     // Hours realism check
     const totalHours = filled.reduce((sum, a) => sum + (parseFloat(a.hours_per_week) || 0), 0);
     const flagged = filled
-      .filter(a => (parseFloat(a.hours_per_week) || 0) > 30)
+      .filter(a => (parseFloat(a.hours_per_week) || 0) > 25)
       .map(a => `${a.activity_type || "Activity"} (${a.hours_per_week}h/week)`);
     const warning = totalHours > 50 ? { totalHours, flagged } : null;
     setHoursWarning(warning);
@@ -380,7 +381,7 @@ export default function ActivitiesPage() {
     paddingRight: 32, WebkitAppearance: "none", appearance: "none",
   };
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 500, textTransform: "uppercase" as const,
+    fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
     letterSpacing: "0.08em", color: muted, marginBottom: 6,
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
@@ -433,15 +434,26 @@ export default function ActivitiesPage() {
   function renderActivityCard(act: Activity, index: number) {
     const isExpanded = expandedCards[index] ?? true;
     return (
-      <div key={index} style={{ border: `0.5px solid ${border}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}>
-        <div onClick={() => toggleCard(index)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 15px", cursor: "pointer", backgroundColor: surface }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: act.activity_type ? text : muted, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-            {act.activity_type ? `Activity ${index + 1} — ${act.activity_type}` : `Activity ${index + 1}`}
+      <div key={index} style={{
+        border: isExpanded ? "1px solid rgba(154,112,64,0.3)" : "1px solid rgba(0,0,0,0.08)",
+        borderRadius: 12, marginBottom: 10, overflow: "hidden",
+        backgroundColor: "#fff",
+        boxShadow: isExpanded ? "0 4px 16px rgba(154,112,64,0.08)" : "none",
+        transition: "border-color 0.2s, box-shadow 0.2s",
+      }}>
+        <div onClick={() => toggleCard(index)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", cursor: "pointer", backgroundColor: "#fff" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", background: gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", fontFamily: "system-ui, -apple-system, sans-serif" }}>{index + 1}</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: act.activity_type ? text : muted, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+              {act.activity_type ? act.activity_type : `Activity ${index + 1}`}
+            </div>
           </div>
-          <div style={{ color: muted, fontSize: 11 }}>{isExpanded ? "▲" : "▼"}</div>
+          <div style={{ color: gold, fontSize: 11, fontWeight: 600 }}>{isExpanded ? "▲" : "▼"}</div>
         </div>
         {isExpanded && (
-          <div style={{ padding: "0 15px 15px", backgroundColor: surface, borderTop: `0.5px solid ${border}`, display: "flex", flexDirection: "column", gap: 13 }}>
+          <div style={{ padding: "0 20px 18px", backgroundColor: "#fff", borderTop: "1px solid rgba(154,112,64,0.15)", display: "flex", flexDirection: "column", gap: 13 }}>
             <div style={{ paddingTop: 13 }}>
               <div style={labelStyle}>Activity type</div>
               <select style={selectStyle} value={act.activity_type} onChange={e => updateActivity(index, "activity_type", e.target.value)}>
@@ -533,9 +545,9 @@ export default function ActivitiesPage() {
   const nav = (
     <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 28px", borderBottom: `0.5px solid ${border}`, background: navBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-        <a href="/dashboard" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
+        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
           Sheldon<span style={{ color: gold }}>AI</span>
-        </a>
+        </Link>
         <a href="/dashboard" style={{ fontSize: 13, color: muted, textDecoration: "none" }}>← Dashboard</a>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -620,12 +632,29 @@ export default function ActivitiesPage() {
                   onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
-                  style={{ border: `2px dashed ${dragOver ? gold : border}`, borderRadius: 12, padding: "24px", textAlign: "center", backgroundColor: dragOver ? (isDark ? "rgba(201,169,110,0.05)" : "rgba(154,112,64,0.04)") : "transparent", transition: "border-color 0.2s, background-color 0.2s", marginBottom: 10 }}
+                  style={{
+                    border: `2px dashed ${dragOver ? gold : "rgba(154,112,64,0.4)"}`,
+                    borderRadius: 14, padding: "36px 24px", textAlign: "center",
+                    background: dragOver
+                      ? (isDark ? "rgba(201,169,110,0.07)" : "rgba(154,112,64,0.06)")
+                      : (isDark ? "linear-gradient(135deg, rgba(154,112,64,0.06) 0%, rgba(154,112,64,0.02) 100%)" : "linear-gradient(135deg, rgba(154,112,64,0.04) 0%, rgba(154,112,64,0.01) 100%)"),
+                    transition: "border-color 0.2s, background 0.2s",
+                    marginBottom: 10,
+                  }}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 500, color: text, marginBottom: 4, fontFamily: "system-ui, -apple-system, sans-serif" }}>Upload your Common App Activities PDF</div>
-                  <div style={{ fontSize: 12, color: muted, marginBottom: 14, fontFamily: "system-ui, -apple-system, sans-serif" }}>Drop your PDF here or click to browse — we&apos;ll fill everything in automatically</div>
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+                    <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: text, marginBottom: 6, fontFamily: "system-ui, -apple-system, sans-serif" }}>Upload your Common App Activities PDF</div>
+                  <div style={{ fontSize: 13, color: muted, marginBottom: 20, fontFamily: "system-ui, -apple-system, sans-serif" }}>Drop your PDF here or click to browse — we&apos;ll fill everything in automatically</div>
                   <button type="button" onClick={() => fileInputRef.current?.click()}
-                    style={{ fontSize: 13, color: gold, backgroundColor: "transparent", border: `0.5px solid ${gold}`, borderRadius: 7, padding: "7px 18px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                    style={{ fontSize: 13, color: isDark ? "#080810" : "#FAFAF5", backgroundColor: gold, border: "none", borderRadius: 8, padding: "9px 22px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 600, WebkitAppearance: "none", appearance: "none" }}>
                     Browse files
                   </button>
                   <input ref={fileInputRef} type="file" accept="application/pdf" multiple style={{ display: "none" }}
@@ -647,9 +676,9 @@ export default function ActivitiesPage() {
                     {isUploading ? "Analyzing…" : "Analyze & Fill →"}
                   </button>
                 )}
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 14 }}>
                   <button type="button" onClick={() => document.getElementById("activity-form-section")?.scrollIntoView({ behavior: "smooth" })}
-                    style={{ fontSize: 13, color: muted, backgroundColor: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", textDecoration: "underline", padding: 0 }}>
+                    style={{ fontSize: 13, color: gold, backgroundColor: "transparent", border: "none", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", textDecoration: "underline", textUnderlineOffset: "2px", padding: 0 }}>
                     Skip — fill manually →
                   </button>
                 </div>
@@ -720,9 +749,9 @@ export default function ActivitiesPage() {
 
             {/* Right column */}
             <div style={{ width: 240, flexShrink: 0, position: "sticky", top: 80 }}>
-              <div style={{ backgroundColor: surface, border: `0.5px solid ${border}`, borderRadius: 12, padding: "20px" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: muted, marginBottom: 12, fontFamily: "system-ui, -apple-system, sans-serif" }}>How to write great descriptions</div>
-                <div style={{ fontSize: 12, color: muted, lineHeight: "1.7", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #0a0a12 100%)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "14px" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "rgba(250,250,245,0.45)", marginBottom: 12, fontFamily: "system-ui, -apple-system, sans-serif" }}>How to write great descriptions</div>
+                <div style={{ fontSize: 12, color: "rgba(250,250,245,0.65)", lineHeight: "1.7", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", gap: 8 }}>
                   <div>✦ Use semicolons to separate points — pack maximum info in minimum characters</div>
                   <div>✦ Describe exactly what you DID, not just your title</div>
                   <div>✦ Include numbers — how many people, how much money, what rank</div>
@@ -733,10 +762,10 @@ export default function ActivitiesPage() {
                 </div>
                 {selectedMajors.length > 0 && (
                   <div style={{ marginTop: 18 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: muted, marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>Grading for</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "rgba(250,250,245,0.35)", marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>Grading for</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {selectedMajors.map(m => (
-                        <span key={m} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 999, border: `0.5px solid ${isDark ? "rgba(201,169,110,0.4)" : "rgba(154,112,64,0.4)"}`, color: gold, backgroundColor: isDark ? "rgba(201,169,110,0.08)" : "rgba(154,112,64,0.06)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                        <span key={m} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 999, border: "0.5px solid rgba(201,169,110,0.4)", color: "#C9A96E", backgroundColor: "rgba(201,169,110,0.08)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
                           {m}
                         </span>
                       ))}
@@ -744,12 +773,12 @@ export default function ActivitiesPage() {
                   </div>
                 )}
                 {savedGrade && (
-                  <div style={{ marginTop: 18, paddingTop: 14, borderTop: `0.5px solid ${border}` }}>
-                    <div style={{ fontSize: 11, color: muted, marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  <div style={{ marginTop: 18, paddingTop: 14, borderTop: "0.5px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{ fontSize: 11, color: "rgba(250,250,245,0.4)", marginBottom: 8, fontFamily: "system-ui, -apple-system, sans-serif" }}>
                       Last graded: {new Date(savedGrade.created_at).toLocaleDateString()}
                     </div>
                     <button type="button" onClick={() => setPhase("results")}
-                      style={{ fontSize: 12, color: gold, backgroundColor: "transparent", border: `0.5px solid ${gold}`, borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
+                      style={{ fontSize: 12, color: "#C9A96E", backgroundColor: "transparent", border: "0.5px solid #C9A96E", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontFamily: "system-ui, -apple-system, sans-serif", WebkitAppearance: "none", appearance: "none" }}>
                       View saved results →
                     </button>
                   </div>

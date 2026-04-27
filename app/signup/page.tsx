@@ -69,11 +69,10 @@ export default function SignupPage() {
     if (data.user) {
       await supabase.from('profiles').upsert({
         user_id: data.user.id,
-        role,
         email: data.user.email,
-        full_name: '',
+        role,
         updated_at: new Date().toISOString(),
-      });
+      }, { onConflict: 'user_id' });
       router.push(role === 'counselor' ? '/counselor/dashboard' : '/dashboard');
     } else {
       setView("check-email");
@@ -193,40 +192,41 @@ export default function SignupPage() {
           <input type="password" placeholder="Confirm password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={input} />
 
           {/* Role selection */}
-          <div>
-            <div style={{ fontSize: 13, color: muted, marginBottom: 8, fontFamily: "system-ui,sans-serif" }}>I am a…</div>
+          <div style={{ marginBottom: 20 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div
                 onClick={() => setRole('student')}
                 style={{
-                  border: role === 'student' ? `2px solid ${gold}` : '1px solid rgba(0,0,0,0.1)',
-                  background: role === 'student' ? 'rgba(154,112,64,0.05)' : '#fff',
-                  borderRadius: 12, padding: 20, cursor: 'pointer', transition: 'all 0.15s',
+                  border: role === 'student' ? '2px solid #9a7040' : '1px solid rgba(0,0,0,0.1)',
+                  background: role === 'student' ? 'rgba(154,112,64,0.06)' : '#fff',
+                  borderRadius: 12, padding: '18px 16px', cursor: 'pointer',
+                  transition: 'all 0.15s', textAlign: 'center',
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8, display: 'block' }}>
-                  <path d="M22 10L12 5 2 10l10 5 10-5z"/>
-                  <path d="M6 12.5v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4"/>
-                  <line x1="22" y1="10" x2="22" y2="16"/>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a7040" strokeWidth="1.5" style={{ marginBottom: 8, display: 'block', margin: '0 auto 8px' }}>
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
                 </svg>
-                <div style={{ fontSize: 16, fontWeight: 600, color: text, marginBottom: 4, fontFamily: "system-ui,sans-serif" }}>I&apos;m a Student</div>
-                <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui,sans-serif", lineHeight: 1.4 }}>Get personalized college admissions guidance</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: '#0a0a12', marginBottom: 3 }}>I&apos;m a Student</div>
+                <div style={{ fontSize: 12, color: 'rgba(10,10,18,0.45)', lineHeight: 1.5 }}>Get personalized college admissions guidance</div>
               </div>
               <div
                 onClick={() => setRole('counselor')}
                 style={{
-                  border: role === 'counselor' ? `2px solid ${gold}` : '1px solid rgba(0,0,0,0.1)',
-                  background: role === 'counselor' ? 'rgba(154,112,64,0.05)' : '#fff',
-                  borderRadius: 12, padding: 20, cursor: 'pointer', transition: 'all 0.15s',
+                  border: role === 'counselor' ? '2px solid #9a7040' : '1px solid rgba(0,0,0,0.1)',
+                  background: role === 'counselor' ? 'rgba(154,112,64,0.06)' : '#fff',
+                  borderRadius: 12, padding: '18px 16px', cursor: 'pointer',
+                  transition: 'all 0.15s', textAlign: 'center',
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8, display: 'block' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a7040" strokeWidth="1.5" style={{ marginBottom: 8, display: 'block', margin: '0 auto 8px' }}>
                   <rect x="2" y="7" width="20" height="14" rx="2"/>
                   <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-                  <line x1="2" y1="13" x2="22" y2="13"/>
+                  <line x1="12" y1="12" x2="12" y2="16"/>
+                  <line x1="10" y1="14" x2="14" y2="14"/>
                 </svg>
-                <div style={{ fontSize: 16, fontWeight: 600, color: text, marginBottom: 4, fontFamily: "system-ui,sans-serif" }}>I&apos;m a Counselor</div>
-                <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui,sans-serif", lineHeight: 1.4 }}>Manage students and supercharge your workflow</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: '#0a0a12', marginBottom: 3 }}>I&apos;m a Counselor</div>
+                <div style={{ fontSize: 12, color: 'rgba(10,10,18,0.45)', lineHeight: 1.5 }}>Manage students and supercharge your workflow</div>
               </div>
             </div>
           </div>

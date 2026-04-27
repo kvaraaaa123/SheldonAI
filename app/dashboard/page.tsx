@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 
 type ProfileData = {
   full_name: string | null;
   onboarding_complete: boolean;
+  gpa: number | null;
+  passion_description: string | null;
+  sat_score: number | null;
+  act_score: number | null;
 };
 
 export default function DashboardPage() {
@@ -31,7 +36,7 @@ export default function DashboardPage() {
       const uid = data.session.user.id;
       setUserEmail(data.session.user.email ?? "");
       const [{ data: profile }, { data: colleges }, { count: essays }] = await Promise.all([
-        supabase.from("profiles").select("full_name, onboarding_complete").eq("user_id", uid).maybeSingle(),
+        supabase.from("profiles").select("full_name, onboarding_complete, gpa, passion_description, sat_score, act_score").eq("user_id", uid).maybeSingle(),
         supabase.from("college_lists").select("id").eq("user_id", uid),
         supabase.from("essays").select("id", { count: "exact" }).eq("user_id", uid),
       ]);
@@ -47,6 +52,12 @@ export default function DashboardPage() {
   }
 
   const firstName = profileData?.full_name?.split(" ")[0] ?? "Scholar";
+  const profileComplete = !!(
+    profileData?.full_name &&
+    profileData?.gpa &&
+    profileData?.passion_description &&
+    (profileData?.sat_score || profileData?.act_score)
+  );
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -84,9 +95,9 @@ export default function DashboardPage() {
         background: navBg, backdropFilter: "blur(12px)",
         position: "sticky", top: 0, zIndex: 50,
       }}>
-        <a href="/dashboard" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
+        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
           Sheldon<span style={{ color: gold }}>AI</span>
-        </a>
+        </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 12, color: muted }}>{userEmail}</span>
           <button onClick={() => router.push("/settings")} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 6 }}>
@@ -158,25 +169,38 @@ export default function DashboardPage() {
             onClick={() => router.push("/profile")}
             style={{
               padding: "26px 22px",
-              border: "0.5px solid rgba(154,112,64,0.4)",
+              border: profileComplete ? `0.5px solid ${cardBorder2_4}` : "0.5px solid rgba(154,112,64,0.4)",
               borderRadius: 16,
-              background: isDark ? "rgba(154,112,64,0.07)" : "rgba(154,112,64,0.03)",
+              background: profileComplete ? cardBg2_4 : (isDark ? "rgba(154,112,64,0.07)" : "rgba(154,112,64,0.03)"),
               cursor: "pointer",
               display: "flex",
               flexDirection: "column",
               minHeight: 220,
+              position: "relative",
             }}
           >
-            <div className="card-step-num" style={{ width: 26, height: 26, borderRadius: "50%", border: "0.5px solid #9a7040", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, color: "#9a7040", marginBottom: 16 }}>1</div>
-            <div className="card-icon-inner" style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(154,112,64,0.12)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, transition: "background 0.2s" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#9a7040" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.2s" }}>
+            {profileComplete && (
+              <div style={{
+                position: "absolute", top: 12, right: 12,
+                width: 20, height: 20, borderRadius: "50%",
+                background: "#16a34a",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                  <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            )}
+            <div className="card-step-num" style={{ width: 26, height: 26, borderRadius: "50%", border: profileComplete ? `0.5px solid ${dimStepBorder}` : "0.5px solid #9a7040", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, color: profileComplete ? dimStepColor : "#9a7040", marginBottom: 16 }}>1</div>
+            <div className="card-icon-inner" style={{ width: 42, height: 42, borderRadius: 11, background: profileComplete ? dimIconBg : "rgba(154,112,64,0.12)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, transition: "background 0.2s" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke={profileComplete ? dimIconStroke : "#9a7040"} strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.2s" }}>
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
             </div>
             <div style={{ fontSize: 15, fontWeight: 500, color: isDark ? "#fafaf5" : "#0a0a12", marginBottom: 6 }}>Profile</div>
-            <div style={{ fontSize: 12, lineHeight: 1.65, color: isDark ? "rgba(250,250,245,0.45)" : "rgba(10,10,18,0.45)", flex: 1 }}>Your academics, background, interests, and goals. The foundation every other tool builds on — the more complete, the more personalized everything becomes.</div>
-            <div className="card-open-link" style={{ fontSize: 11, fontWeight: 500, color: "#9a7040", marginTop: 16, transition: "color 0.2s" }}>Start here →</div>
+            <div style={{ fontSize: 12, lineHeight: 1.65, color: profileComplete ? dimDescColor : (isDark ? "rgba(250,250,245,0.45)" : "rgba(10,10,18,0.45)"), flex: 1 }}>Your academics, background, interests, and goals. The foundation every other tool builds on — the more complete, the more personalized everything becomes.</div>
+            <div className="card-open-link" style={{ fontSize: 11, fontWeight: 500, color: profileComplete ? dimLinkColor : "#9a7040", marginTop: 16, transition: "color 0.2s" }}>{profileComplete ? "Edit profile →" : "Start here →"}</div>
           </div>
 
           {/* Card 2 — Activities */}

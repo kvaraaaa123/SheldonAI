@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { UNIVERSITY_DATABASE, UniversityEntry } from "@/lib/universityDatabase";
@@ -415,9 +416,9 @@ export default function CollegesPage() {
         position: "sticky", top: 0, zIndex: 50,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <a href="/dashboard" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
+          <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
             Sheldon<span style={{ color: gold }}>AI</span>
-          </a>
+          </Link>
           <a href="/dashboard" style={{ fontSize: 12, color: muted, textDecoration: "none" }}>← Dashboard</a>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
