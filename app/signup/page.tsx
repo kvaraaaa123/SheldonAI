@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError]                 = useState("");
   const [loading, setLoading]             = useState(false);
+  const [role, setRole]           = useState<'student' | 'counselor'>('student');
   const [honeypot,  setHoneypot]  = useState("");
   const [num1,      setNum1]      = useState(0);
   const [num2,      setNum2]      = useState(0);
@@ -62,10 +63,21 @@ export default function SignupPage() {
     if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
-    const { error: err } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: 'https://sheldon-ai-red.vercel.app/dashboard' } });
+    const { data, error: err } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: 'https://sheldon-ai-red.vercel.app/dashboard' } });
     setLoading(false);
     if (err) { setError(err.message); return; }
-    setView("check-email");
+    if (data.user) {
+      await supabase.from('profiles').upsert({
+        user_id: data.user.id,
+        role,
+        email: data.user.email,
+        full_name: '',
+        updated_at: new Date().toISOString(),
+      });
+      router.push(role === 'counselor' ? '/counselor/dashboard' : '/dashboard');
+    } else {
+      setView("check-email");
+    }
   }
 
   async function handleSignIn(e: React.FormEvent) {
@@ -179,6 +191,46 @@ export default function SignupPage() {
           <input type="email" placeholder="Email address" required value={email} onChange={e => setEmail(e.target.value)} style={input} />
           <input type="password" placeholder="Password" required value={password} onChange={e => setPassword(e.target.value)} style={input} />
           <input type="password" placeholder="Confirm password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={input} />
+
+          {/* Role selection */}
+          <div>
+            <div style={{ fontSize: 13, color: muted, marginBottom: 8, fontFamily: "system-ui,sans-serif" }}>I am a…</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div
+                onClick={() => setRole('student')}
+                style={{
+                  border: role === 'student' ? `2px solid ${gold}` : '1px solid rgba(0,0,0,0.1)',
+                  background: role === 'student' ? 'rgba(154,112,64,0.05)' : '#fff',
+                  borderRadius: 12, padding: 20, cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8, display: 'block' }}>
+                  <path d="M22 10L12 5 2 10l10 5 10-5z"/>
+                  <path d="M6 12.5v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4"/>
+                  <line x1="22" y1="10" x2="22" y2="16"/>
+                </svg>
+                <div style={{ fontSize: 16, fontWeight: 600, color: text, marginBottom: 4, fontFamily: "system-ui,sans-serif" }}>I&apos;m a Student</div>
+                <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui,sans-serif", lineHeight: 1.4 }}>Get personalized college admissions guidance</div>
+              </div>
+              <div
+                onClick={() => setRole('counselor')}
+                style={{
+                  border: role === 'counselor' ? `2px solid ${gold}` : '1px solid rgba(0,0,0,0.1)',
+                  background: role === 'counselor' ? 'rgba(154,112,64,0.05)' : '#fff',
+                  borderRadius: 12, padding: 20, cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8, display: 'block' }}>
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+                  <line x1="2" y1="13" x2="22" y2="13"/>
+                </svg>
+                <div style={{ fontSize: 16, fontWeight: 600, color: text, marginBottom: 4, fontFamily: "system-ui,sans-serif" }}>I&apos;m a Counselor</div>
+                <div style={{ fontSize: 13, color: muted, fontFamily: "system-ui,sans-serif", lineHeight: 1.4 }}>Manage students and supercharge your workflow</div>
+              </div>
+            </div>
+          </div>
+
           {/* Math verification */}
           <div>
             <label style={{ display: "block", fontSize: 13, color: muted, marginBottom: 6, fontFamily: "system-ui,sans-serif" }}>
