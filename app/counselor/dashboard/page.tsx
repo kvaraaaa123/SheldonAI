@@ -213,9 +213,28 @@ export default function CounselorDashboard() {
               cursor: "pointer", fontFamily: "system-ui,sans-serif",
             }}
           >
-            Add Student +
+            ＋ Add Student
           </button>
         </div>
+
+        {/* Stats bar */}
+        {!loading && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 32 }}>
+            {[
+              { label: "Total students", value: students.length },
+              { label: "Active", value: students.filter(s => s.invite_status === "accepted").length },
+              { label: "Pending invitations", value: students.filter(s => s.invite_status === "pending").length },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                background: isDark ? "rgba(154,112,64,0.08)" : "rgba(154,112,64,0.05)",
+                border: "0.5px solid rgba(154,112,64,0.2)", borderRadius: 12, padding: "16px 20px",
+              }}>
+                <div style={{ fontSize: 26, fontWeight: 600, color: gold, fontFamily: "Georgia, serif" }}>{stat.value}</div>
+                <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Student roster */}
         {loading ? (
@@ -223,14 +242,20 @@ export default function CounselorDashboard() {
         ) : students.length === 0 ? (
           /* Empty state */
           <div style={{ textAlign: "center", marginTop: 80 }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={isDark ? "rgba(250,250,245,0.2)" : "rgba(0,0,0,0.18)"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16, display: "block", margin: "0 auto 16px" }}>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke={isDark ? "rgba(250,250,245,0.18)" : "rgba(0,0,0,0.15)"} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 20px" }}>
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
               <line x1="19" y1="8" x2="19" y2="14"/>
               <line x1="16" y1="11" x2="22" y2="11"/>
             </svg>
-            <div style={{ fontSize: 18, fontWeight: 500, color: text, marginBottom: 8 }}>No students yet</div>
-            <div style={{ fontSize: 13, color: muted }}>Click &apos;Add Student&apos; to invite your first student</div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, color: text, marginBottom: 8 }}>No students yet</div>
+            <div style={{ fontSize: 13, color: muted, marginBottom: 24 }}>Click &apos;+ Add Student&apos; to invite your first student.</div>
+            <button
+              onClick={() => { setShowModal(true); setInviteEmail(""); setInviteError(""); setInviteSuccess(false); }}
+              style={{ background: gold, color: "#fff", border: "none", borderRadius: 8, padding: "11px 24px", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "system-ui,sans-serif" }}
+            >
+              ＋ Add Your First Student
+            </button>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 32 }}>
@@ -254,9 +279,9 @@ export default function CounselorDashboard() {
                     </div>
                     {isPending ? (
                       <span style={{
-                        fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 99,
+                        fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 99,
                         background: "rgba(217,119,6,0.1)", color: "#d97706",
-                      }}>Pending</span>
+                      }}>Pending invitation</span>
                     ) : (
                       <span style={{
                         fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 99,
@@ -296,7 +321,7 @@ export default function CounselorDashboard() {
                       color: muted, border: "none", cursor: "default",
                       fontFamily: "system-ui,sans-serif",
                     }}>
-                      Invitation Pending
+                      Awaiting acceptance
                     </button>
                   ) : (
                     <div style={{ display: "flex", gap: 8 }}>
@@ -355,13 +380,16 @@ export default function CounselorDashboard() {
               ×
             </button>
 
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#0a0a12", marginBottom: 20, fontFamily: "system-ui,sans-serif" }}>
-              Add a Student
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, color: "#0a0a12", marginBottom: 6 }}>
+              Invite a Student
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(10,10,18,0.5)", marginBottom: 20, lineHeight: 1.55 }}>
+              Enter their email address. They must already have a SheldonAI account.
             </div>
 
             {inviteSuccess ? (
               <div style={{ textAlign: "center", padding: "20px 0", color: "#16a34a", fontSize: 15, fontWeight: 500 }}>
-                Invitation sent!
+                Invitation sent to {inviteEmail} ✓
               </div>
             ) : (
               <form onSubmit={handleInvite} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -372,6 +400,8 @@ export default function CounselorDashboard() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = "#9a7040")}
+                  onBlur={e => (e.target.style.borderColor = "rgba(0,0,0,0.12)")}
                 />
                 {inviteError && (
                   <p style={{ fontSize: 13, color: "#dc2626", margin: 0, fontFamily: "system-ui,sans-serif" }}>

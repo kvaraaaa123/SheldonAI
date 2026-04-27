@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const [deleteInput,    setDeleteInput]    = useState("");
   const [showDeleteConf, setShowDeleteConf] = useState(false);
   const [deadlineReminders, setDeadlineReminders] = useState(false);
+  const [currentRole,    setCurrentRole]    = useState<"student" | "counselor">("student");
+  const [showRoleConfirm, setShowRoleConfirm] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -35,11 +37,12 @@ export default function SettingsPage() {
       setUserEmail(user.email ?? "");
       setUserId(user.id);
       const { data: profile } = await supabase
-        .from("profiles").select("feedback_style, essay_feedback_depth")
+        .from("profiles").select("feedback_style, essay_feedback_depth, role")
         .eq("user_id", user.id).maybeSingle();
       if (profile) {
         setFeedbackStyle(profile.feedback_style ?? "");
         setFeedbackDepth(profile.essay_feedback_depth ?? "");
+        setCurrentRole(profile.role === "counselor" ? "counselor" : "student");
       }
       setDeadlineReminders(localStorage.getItem("deadline_reminders") === "true");
     });
@@ -73,6 +76,14 @@ export default function SettingsPage() {
     const a = document.createElement("a");
     a.href = url; a.download = "sheldonai-profile.json"; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleRoleSwitch() {
+    const newRole = currentRole === "student" ? "counselor" : "student";
+    await supabase.from("profiles").update({ role: newRole, updated_at: new Date().toISOString() }).eq("user_id", userId);
+    setCurrentRole(newRole);
+    setShowRoleConfirm(false);
+    router.push(newRole === "counselor" ? "/counselor/dashboard" : "/dashboard");
   }
 
   async function handleDeleteAccount() {
@@ -320,6 +331,56 @@ export default function SettingsPage() {
             <a href="#" style={{ fontSize: 13, color: gold, textDecoration: "none" }}>Privacy Policy</a>
             <a href="#" style={{ fontSize: 13, color: gold, textDecoration: "none" }}>Terms of Service</a>
           </div>
+        </div>
+
+        {/* Section 6 — Account Type */}
+        <div style={{ ...card, gap: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: text }}>Account Type</div>
+
+          <div>
+            <div style={{ fontSize: 13, color: muted, marginBottom: 10 }}>Your account type</div>
+            <span style={{
+              display: "inline-block", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500,
+              background: currentRole === "counselor"
+                ? (isDark ? "rgba(201,169,110,0.15)" : "rgba(154,112,64,0.10)")
+                : (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"),
+              color: currentRole === "counselor" ? gold : muted,
+              border: `0.5px solid ${currentRole === "counselor" ? gold : (isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)")}`,
+            }}>
+              {currentRole === "counselor" ? "Counselor" : "Student"}
+            </span>
+          </div>
+
+          {!showRoleConfirm ? (
+            <button
+              onClick={() => setShowRoleConfirm(true)}
+              style={{ fontSize: 12, color: muted, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "system-ui, sans-serif", textAlign: "left" }}
+            >
+              Switch to {currentRole === "counselor" ? "Student" : "Counselor"}
+            </button>
+          ) : (
+            <div style={{ borderTop: `0.5px solid ${border}`, paddingTop: 14 }}>
+              <div style={{ fontSize: 13, color: muted, marginBottom: 12, lineHeight: 1.6 }}>
+                Are you sure? This will change how SheldonAI works for you.
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={handleRoleSwitch} style={{
+                  fontSize: 12, color: gold, background: "transparent",
+                  border: `0.5px solid ${gold}`, borderRadius: 7, padding: "6px 14px",
+                  cursor: "pointer", fontFamily: "system-ui, sans-serif",
+                }}>
+                  Confirm
+                </button>
+                <button onClick={() => setShowRoleConfirm(false)} style={{
+                  fontSize: 12, color: muted, background: "transparent",
+                  border: `0.5px solid ${border}`, borderRadius: 7, padding: "6px 14px",
+                  cursor: "pointer", fontFamily: "system-ui, sans-serif",
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
