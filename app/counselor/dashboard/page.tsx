@@ -50,8 +50,6 @@ export default function CounselorDashboard() {
       .ilike('email', inviteEmail.trim())
       .single()
 
-    console.log('RAW SUPABASE RESULT:', JSON.stringify(data), JSON.stringify(error))
-
     if (!data) {
       setInviteStatus('No SheldonAI account found with that email.')
       return
