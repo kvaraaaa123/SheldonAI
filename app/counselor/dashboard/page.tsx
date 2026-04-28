@@ -13,6 +13,8 @@ export default function CounselorDashboard() {
   const [showModal, setShowModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteStatus, setInviteStatus] = useState('')
+  const [inviteError, setInviteError] = useState('')
+  const [inviteSuccess, setInviteSuccess] = useState(false)
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -44,33 +46,52 @@ export default function CounselorDashboard() {
 
   const sendInvite = async () => {
     setInviteStatus('loading')
+    setInviteError('')
+    setInviteSuccess(false)
+
+    const emailToSearch = inviteEmail.trim().toLowerCase()
+
     const { data, error } = await supabase
       .from('profiles')
       .select('user_id, full_name, email')
-      .ilike('email', inviteEmail.trim())
+      .ilike('email', emailToSearch)
       .single()
 
-    if (!data) {
-      setInviteStatus('No SheldonAI account found with that email.')
+    console.log('invite lookup result:', data, error)
+
+    if (error || !data) {
+      setInviteStatus('')
+      setInviteError('No SheldonAI account found with that email.')
       return
     }
 
     const { data: { session } } = await supabase.auth.getSession()
-    await supabase.from('counselor_students').upsert({
-      counselor_id: session!.user.id,
-      student_id: data.user_id,
-      invite_status: 'pending'
-    }, { onConflict: 'counselor_id,student_id' })
 
-    // Refresh roster so the new student card appears immediately
+    const { error: insertError } = await supabase
+      .from('counselor_students')
+      .insert({
+        counselor_id: session!.user.id,
+        student_id: data.user_id,
+        invite_status: 'pending'
+      })
+
+    if (insertError) {
+      setInviteStatus('')
+      setInviteError('Failed to send invite: ' + insertError.message)
+      return
+    }
+
+    // Refresh roster so new card appears immediately
     const { data: cs } = await supabase
       .from('counselor_students')
       .select('*, student:student_id(user_id, full_name, email, gpa, intended_major, grade)')
       .eq('counselor_id', session!.user.id)
     setStudents(cs || [])
 
-    setInviteStatus('success')
-    setTimeout(() => { setShowModal(false); setInviteEmail(''); setInviteStatus('') }, 1500)
+    setInviteStatus('')
+    setInviteSuccess(true)
+    setInviteEmail('')
+    setTimeout(() => { setShowModal(false); setInviteSuccess(false) }, 1500)
   }
 
   const signOut = async () => {
@@ -194,7 +215,7 @@ export default function CounselorDashboard() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: 440, maxWidth: '90vw', position: 'relative' }}>
-            <button onClick={() => { setShowModal(false); setInviteStatus('') }} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(10,10,18,0.4)' }}>×</button>
+            <button onClick={() => { setShowModal(false); setInviteStatus(''); setInviteError(''); setInviteSuccess(false) }} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'rgba(10,10,18,0.4)' }}>×</button>
             <div style={{ fontFamily: 'Georgia,serif', fontSize: 20, fontWeight: 500, color: '#0a0a12', marginBottom: 6 }}>Invite a Student</div>
             <div style={{ fontSize: 13, color: 'rgba(10,10,18,0.45)', marginBottom: 20 }}>Enter their email. They must already have a SheldonAI account.</div>
             <input
@@ -204,10 +225,10 @@ export default function CounselorDashboard() {
               placeholder="student@email.com"
               style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box', outline: 'none' }}
             />
-            {inviteStatus && inviteStatus !== 'loading' && inviteStatus !== 'success' && (
-              <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 12 }}>{inviteStatus}</div>
+            {inviteError && (
+              <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 12 }}>{inviteError}</div>
             )}
-            {inviteStatus === 'success' && (
+            {inviteSuccess && (
               <div style={{ fontSize: 13, color: '#16a34a', marginBottom: 12 }}>Invitation sent! ✓</div>
             )}
             <button
