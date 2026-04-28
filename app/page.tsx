@@ -25,15 +25,13 @@ const UNIS = [
 ];
 
 export default function Home() {
-  const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.push("/dashboard");
-      else setReady(true);
+    supabase.auth.getSession().then(() => {
+      setReady(true);
     });
-  }, [router]);
+  }, []);
 
   if (!ready) return (
     <div style={{ background: "#FAFAF8", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>

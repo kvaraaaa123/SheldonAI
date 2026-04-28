@@ -96,7 +96,7 @@ export default function DashboardPage() {
         position: "sticky", top: 0, zIndex: 50,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(10,10,18,0.45)', textDecoration: 'none', fontSize: '20px', marginRight: '12px', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#9a7040'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(10,10,18,0.45)'} title="Back to Home">←</Link>
+          <Link href="/" style={{ color: 'rgba(10,10,18,0.45)', fontSize: '22px', textDecoration: 'none', marginRight: '14px', lineHeight: 1 }} onMouseEnter={e => (e.currentTarget.style.color = '#9a7040')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(10,10,18,0.45)')}>←</Link>
           <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
             Sheldon<span style={{ color: gold }}>AI</span>
           </Link>

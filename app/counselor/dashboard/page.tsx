@@ -44,15 +44,15 @@ export default function CounselorDashboard() {
 
   const sendInvite = async () => {
     setInviteStatus('loading')
-    const { data: found, error: lookupErr } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('user_id, full_name, email')
       .ilike('email', inviteEmail.trim())
       .single()
 
-    console.log('lookup result:', found, lookupErr)
+    console.log('RAW SUPABASE RESULT:', JSON.stringify(data), JSON.stringify(error))
 
-    if (!found) {
+    if (!data) {
       setInviteStatus('No SheldonAI account found with that email.')
       return
     }
@@ -60,7 +60,7 @@ export default function CounselorDashboard() {
     const { data: { session } } = await supabase.auth.getSession()
     await supabase.from('counselor_students').upsert({
       counselor_id: session!.user.id,
-      student_id: found.user_id,
+      student_id: data.user_id,
       invite_status: 'pending'
     }, { onConflict: 'counselor_id,student_id' })
 
@@ -91,7 +91,7 @@ export default function CounselorDashboard() {
       {/* NAV */}
       <nav style={{ height: 56, borderBottom: '0.5px solid rgba(0,0,0,0.08)', background: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(10,10,18,0.45)', textDecoration: 'none', fontSize: '20px', marginRight: '12px', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#9a7040'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(10,10,18,0.45)'} title="Back to Home">←</Link>
+          <Link href="/" style={{ color: 'rgba(10,10,18,0.45)', fontSize: '22px', textDecoration: 'none', marginRight: '14px', lineHeight: 1 }} onMouseEnter={e => (e.currentTarget.style.color = '#9a7040')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(10,10,18,0.45)')}>←</Link>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 500, color: '#0a0a12' }}>
               Sheldon<span style={{ color: '#9a7040' }}>AI</span>
