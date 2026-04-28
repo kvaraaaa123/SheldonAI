@@ -203,15 +203,21 @@ export default function SignupPage() {
               <div
                 onClick={() => setRole('student')}
                 style={{
-                  border: role === 'student' ? '2px solid #9a7040' : '1.5px solid rgba(0,0,0,0.12)',
+                  border: role === 'student' ? '1px solid #9a7040' : '0.5px solid rgba(0,0,0,0.09)',
                   background: role === 'student' ? 'rgba(154,112,64,0.07)' : '#fff',
                   borderRadius: 12,
                   padding: '18px 14px',
                   cursor: 'pointer',
                   textAlign: 'center',
-                  transition: 'all 0.15s'
+                  transition: 'all 0.15s',
+                  position: 'relative',
                 }}
               >
+                {role === 'student' && (
+                  <div style={{ position: 'absolute', top: 10, right: 10, width: 18, height: 18, borderRadius: '50%', background: '#9a7040', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                )}
                 <div style={{ fontSize: 26, marginBottom: 6 }}>🎓</div>
                 <div style={{ fontWeight: 600, fontSize: 14, color: '#0a0a12', marginBottom: 3 }}>Student</div>
                 <div style={{ fontSize: 11, color: 'rgba(10,10,18,0.45)', lineHeight: 1.5 }}>Get personalized college admissions guidance</div>
@@ -219,15 +225,21 @@ export default function SignupPage() {
               <div
                 onClick={() => setRole('counselor')}
                 style={{
-                  border: role === 'counselor' ? '2px solid #9a7040' : '1.5px solid rgba(0,0,0,0.12)',
+                  border: role === 'counselor' ? '1px solid #9a7040' : '0.5px solid rgba(0,0,0,0.09)',
                   background: role === 'counselor' ? 'rgba(154,112,64,0.07)' : '#fff',
                   borderRadius: 12,
                   padding: '18px 14px',
                   cursor: 'pointer',
                   textAlign: 'center',
-                  transition: 'all 0.15s'
+                  transition: 'all 0.15s',
+                  position: 'relative',
                 }}
               >
+                {role === 'counselor' && (
+                  <div style={{ position: 'absolute', top: 10, right: 10, width: 18, height: 18, borderRadius: '50%', background: '#9a7040', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                )}
                 <div style={{ fontSize: 26, marginBottom: 6 }}>📋</div>
                 <div style={{ fontWeight: 600, fontSize: 14, color: '#0a0a12', marginBottom: 3 }}>Counselor</div>
                 <div style={{ fontSize: 11, color: 'rgba(10,10,18,0.45)', lineHeight: 1.5 }}>Manage students and supercharge your workflow</div>

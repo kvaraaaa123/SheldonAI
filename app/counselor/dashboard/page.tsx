@@ -79,13 +79,24 @@ export default function CounselorDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAF8' }}>
+      <style>{`
+        .back-arrow-c { color: rgba(10,10,18,0.45); text-decoration: none; font-size: 18px; line-height: 1; transition: color 0.15s; position: relative; }
+        .back-arrow-c:hover { color: #9a7040; }
+        .back-arrow-c .back-label { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); font-size: 11px; white-space: nowrap; opacity: 0; transition: opacity 0.15s; pointer-events: none; font-family: system-ui,sans-serif; }
+        .back-arrow-c:hover .back-label { opacity: 1; }
+      `}</style>
       {/* NAV */}
       <nav style={{ height: 56, borderBottom: '0.5px solid rgba(0,0,0,0.08)', background: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 40 }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 500, color: '#0a0a12' }}>
-            Sheldon<span style={{ color: '#9a7040' }}>AI</span>
-          </span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Link href="/" className="back-arrow-c" title="Back to Home">
+            ←<span className="back-label">Back to Home</span>
+          </Link>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <span style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 500, color: '#0a0a12' }}>
+              Sheldon<span style={{ color: '#9a7040' }}>AI</span>
+            </span>
+          </Link>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <span style={{ fontSize: 13, color: 'rgba(10,10,18,0.45)' }}>{profile?.email}</span>
           <Link href="/settings" style={{ color: 'rgba(10,10,18,0.4)', textDecoration: 'none', fontSize: 18 }}>⚙</Link>

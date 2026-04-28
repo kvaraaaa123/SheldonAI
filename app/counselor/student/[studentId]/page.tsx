@@ -70,6 +70,15 @@ export default function StudentDetailPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [analysisResult, setAnalysisResult]   = useState<any>(null);
 
+  // Google Docs
+  const [showDocInput, setShowDocInput]       = useState(false);
+  const [docUrl, setDocUrl]                   = useState("");
+  const [docText, setDocText]                 = useState<string | null>(null);
+  const [docError, setDocError]               = useState("");
+  const [docLoading, setDocLoading]           = useState(false);
+  const [docAnalysis, setDocAnalysis]         = useState<string | null>(null);
+  const [docAnalysisLoading, setDocAnalysisLoading] = useState(false);
+
   const fetchNotes = useCallback(async (counselorId: string) => {
     const { data } = await supabase
       .from("counselor_notes")
@@ -160,6 +169,70 @@ export default function StudentDetailPage() {
       setAnalysisResult({ error: "Analysis failed. Try again." });
     }
     setAnalysisLoading(false);
+  }
+
+  function parseDocId(url: string): string | null {
+    const match = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  }
+
+  async function connectDoc() {
+    setDocError("");
+    setDocText(null);
+    setDocAnalysis(null);
+    const docId = parseDocId(docUrl);
+    if (!docId) {
+      setDocError("Couldn't parse a Google Doc ID from that URL. Make sure it's a full docs.google.com link.");
+      return;
+    }
+    setDocLoading(true);
+    try {
+      const resp = await fetch(`/api/google-doc?docId=${encodeURIComponent(docId)}`);
+      const json = await resp.json();
+      if (json.error === "not_accessible" || !resp.ok) {
+        setDocError("This doc is not publicly accessible — ask the student to set sharing to 'Anyone with the link can view'.");
+      } else {
+        setDocText(json.text ?? "");
+      }
+    } catch {
+      setDocError("Failed to fetch the document. Please try again.");
+    }
+    setDocLoading(false);
+  }
+
+  async function analyzeDoc() {
+    if (!docText) return;
+    setDocAnalysisLoading(true);
+    setDocAnalysis(null);
+    try {
+      const resp = await fetch("/api/annotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ essay: docText.slice(0, 6000), essayType: "commonapp" }),
+      });
+      if (resp.ok) {
+        const json = await resp.json();
+        const lines: string[] = [];
+        if (json.memorabilityScore != null) lines.push(`Memorability: ${json.memorabilityScore}/10`);
+        if (json.hookVerdict) lines.push(`Hook: ${json.hookVerdict}`);
+        if (json.conclusionVerdict) lines.push(`Conclusion: ${json.conclusionVerdict}`);
+        if (json.catastrophicMistake) lines.push(`⚠ ${json.catastrophicMistake}`);
+        if (Array.isArray(json.annotations) && json.annotations.length > 0) {
+          lines.push(`\n${json.annotations.length} sentence annotation(s) found.`);
+          json.annotations.slice(0, 5).forEach((a: { categories?: string[]; sentence?: string; explanation?: string }) => {
+            if (a.categories && a.explanation) {
+              lines.push(`• [${a.categories.join(", ")}] ${a.explanation}`);
+            }
+          });
+        }
+        setDocAnalysis(lines.join("\n") || "Analysis complete.");
+      } else {
+        setDocAnalysis("Analysis failed. Please try again.");
+      }
+    } catch {
+      setDocAnalysis("Analysis failed. Please try again.");
+    }
+    setDocAnalysisLoading(false);
   }
 
   function parseInterests(raw: string | null): string[] {
@@ -449,6 +522,67 @@ export default function StudentDetailPage() {
                 >
                   ↓ Export Student Report
                 </a>
+              </div>
+
+              {/* Google Docs card */}
+              <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 8, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: `0.5px solid ${cardBdr}` }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showDocInput || docText ? 12 : 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: text, fontFamily: "system-ui,sans-serif" }}>Google Docs</span>
+                  {!docText && (
+                    <button
+                      onClick={() => { setShowDocInput(v => !v); setDocError(""); }}
+                      style={{ fontSize: 12, color: gold, background: "none", border: "none", cursor: "pointer", fontFamily: "system-ui,sans-serif", textDecoration: "underline", textUnderlineOffset: 2 }}
+                    >
+                      {showDocInput ? "Cancel" : "Connect"}
+                    </button>
+                  )}
+                  {docText && (
+                    <button onClick={() => { setDocText(null); setDocUrl(""); setShowDocInput(false); setDocAnalysis(null); setDocError(""); }} style={{ fontSize: 12, color: muted, background: "none", border: "none", cursor: "pointer", fontFamily: "system-ui,sans-serif" }}>✕ Remove</button>
+                  )}
+                </div>
+
+                {showDocInput && !docText && (
+                  <div>
+                    <input
+                      type="text"
+                      value={docUrl}
+                      onChange={e => setDocUrl(e.target.value)}
+                      placeholder="Paste Google Doc share link…"
+                      style={{ display: "block", width: "100%", boxSizing: "border-box", padding: "8px 10px", border: `0.5px solid ${cardBdr}`, borderRadius: 6, fontSize: 12, color: text, background: isDark ? "rgba(255,255,255,0.06)" : "#fff", outline: "none", fontFamily: "system-ui,sans-serif", marginBottom: 8 }}
+                    />
+                    {docError && (
+                      <div style={{ fontSize: 12, color: "#d97706", background: "rgba(234,179,8,0.07)", border: "0.5px solid rgba(234,179,8,0.3)", borderRadius: 6, padding: "8px 10px", marginBottom: 8, lineHeight: 1.5 }}>{docError}</div>
+                    )}
+                    <button
+                      onClick={connectDoc}
+                      disabled={docLoading || !docUrl.trim()}
+                      style={{ padding: "7px 14px", borderRadius: 6, fontSize: 12, fontWeight: 500, background: gold, color: "#fff", border: "none", cursor: docLoading || !docUrl.trim() ? "not-allowed" : "pointer", opacity: !docUrl.trim() ? 0.5 : 1, fontFamily: "system-ui,sans-serif" }}
+                    >
+                      {docLoading ? "Fetching…" : "Load Doc"}
+                    </button>
+                  </div>
+                )}
+
+                {docText && (
+                  <div>
+                    <div style={{ fontSize: 12, color: muted, marginBottom: 6 }}>Preview (first 1000 chars)</div>
+                    <div style={{ fontSize: 12, color: text, lineHeight: 1.6, background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)", borderRadius: 6, padding: "10px 12px", border: `0.5px solid ${cardBdr}`, whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto", fontFamily: "Georgia,serif", marginBottom: 10 }}>
+                      {docText.slice(0, 1000)}{docText.length > 1000 ? "…" : ""}
+                    </div>
+                    <button
+                      onClick={analyzeDoc}
+                      disabled={docAnalysisLoading}
+                      style={{ padding: "7px 14px", borderRadius: 6, fontSize: 12, fontWeight: 500, background: gold, color: "#fff", border: "none", cursor: docAnalysisLoading ? "not-allowed" : "pointer", opacity: docAnalysisLoading ? 0.7 : 1, fontFamily: "system-ui,sans-serif" }}
+                    >
+                      {docAnalysisLoading ? "Analyzing…" : "Analyze with SheldonAI"}
+                    </button>
+                    {docAnalysis && (
+                      <div style={{ marginTop: 10, fontSize: 12, color: text, lineHeight: 1.65, whiteSpace: "pre-wrap", padding: "10px 12px", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: `0.5px solid ${cardBdr}` }}>
+                        {docAnalysis}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Activities analysis inline result */}
