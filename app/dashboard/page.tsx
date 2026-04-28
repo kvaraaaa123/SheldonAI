@@ -86,10 +86,6 @@ export default function DashboardPage() {
         .sheldon-card:hover .card-icon-inner svg { stroke: #9a7040 !important; }
         .sheldon-card:hover .card-open-link { color: #9a7040 !important; }
         .sheldon-card:hover .card-step-num { border-color: rgba(154,112,64,0.55) !important; color: #9a7040 !important; }
-        .back-arrow { color: rgba(10,10,18,0.45); text-decoration: none; font-size: 18px; line-height: 1; transition: color 0.15s; position: relative; }
-        .back-arrow:hover { color: #9a7040; }
-        .back-arrow .back-label { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); font-size: 11px; white-space: nowrap; opacity: 0; transition: opacity 0.15s; pointer-events: none; font-family: system-ui,sans-serif; }
-        .back-arrow:hover .back-label { opacity: 1; }
       `}</style>
 
       {/* Nav */}
@@ -100,9 +96,7 @@ export default function DashboardPage() {
         position: "sticky", top: 0, zIndex: 50,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/" className="back-arrow" title="Back to Home">
-            ←<span className="back-label">Back to Home</span>
-          </Link>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(10,10,18,0.45)', textDecoration: 'none', fontSize: '20px', marginRight: '12px', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#9a7040'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(10,10,18,0.45)'} title="Back to Home">←</Link>
           <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 500, textDecoration: "none", color: text, letterSpacing: "-0.02em" }}>
             Sheldon<span style={{ color: gold }}>AI</span>
           </Link>

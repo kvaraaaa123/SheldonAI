@@ -44,11 +44,13 @@ export default function CounselorDashboard() {
 
   const sendInvite = async () => {
     setInviteStatus('loading')
-    const { data: found } = await supabase
+    const { data: found, error: lookupErr } = await supabase
       .from('profiles')
-      .select('user_id, full_name')
-      .eq('email', inviteEmail)
+      .select('user_id, full_name, email')
+      .ilike('email', inviteEmail.trim())
       .single()
+
+    console.log('lookup result:', found, lookupErr)
 
     if (!found) {
       setInviteStatus('No SheldonAI account found with that email.')
@@ -61,6 +63,13 @@ export default function CounselorDashboard() {
       student_id: found.user_id,
       invite_status: 'pending'
     }, { onConflict: 'counselor_id,student_id' })
+
+    // Refresh roster so the new student card appears immediately
+    const { data: cs } = await supabase
+      .from('counselor_students')
+      .select('*, student:student_id(user_id, full_name, email, gpa, intended_major, grade)')
+      .eq('counselor_id', session!.user.id)
+    setStudents(cs || [])
 
     setInviteStatus('success')
     setTimeout(() => { setShowModal(false); setInviteEmail(''); setInviteStatus('') }, 1500)
@@ -79,18 +88,10 @@ export default function CounselorDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAF8' }}>
-      <style>{`
-        .back-arrow-c { color: rgba(10,10,18,0.45); text-decoration: none; font-size: 18px; line-height: 1; transition: color 0.15s; position: relative; }
-        .back-arrow-c:hover { color: #9a7040; }
-        .back-arrow-c .back-label { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); font-size: 11px; white-space: nowrap; opacity: 0; transition: opacity 0.15s; pointer-events: none; font-family: system-ui,sans-serif; }
-        .back-arrow-c:hover .back-label { opacity: 1; }
-      `}</style>
       {/* NAV */}
       <nav style={{ height: 56, borderBottom: '0.5px solid rgba(0,0,0,0.08)', background: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" className="back-arrow-c" title="Back to Home">
-            ←<span className="back-label">Back to Home</span>
-          </Link>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(10,10,18,0.45)', textDecoration: 'none', fontSize: '20px', marginRight: '12px', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#9a7040'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(10,10,18,0.45)'} title="Back to Home">←</Link>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 500, color: '#0a0a12' }}>
               Sheldon<span style={{ color: '#9a7040' }}>AI</span>
