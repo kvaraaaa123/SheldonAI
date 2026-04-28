@@ -49,15 +49,13 @@ export default function CounselorDashboard() {
     setInviteError('')
     setInviteSuccess(false)
 
-    const emailToSearch = inviteEmail.trim().toLowerCase()
-
     const { data, error } = await supabase
       .from('profiles')
       .select('user_id, full_name, email')
-      .ilike('email', emailToSearch)
+      .ilike('email', inviteEmail.trim())
       .single()
 
-    console.log('invite lookup result:', data, error)
+    console.log('lookup:', data, error)
 
     if (error || !data) {
       setInviteStatus('')
