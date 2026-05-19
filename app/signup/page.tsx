@@ -29,8 +29,12 @@ export default function SignupPage() {
   const border = "rgba(10,10,18,0.11)";
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.push("/dashboard");
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const uid = data.session.user.id;
+        const { data: prof } = await supabase.from("profiles").select("role").eq("user_id", uid).maybeSingle();
+        router.push(prof?.role === "counselor" ? "/counselor/dashboard" : "/dashboard");
+      }
     });
     setNum1(Math.floor(Math.random() * 9) + 1);
     setNum2(Math.floor(Math.random() * 9) + 1);
@@ -74,6 +78,11 @@ export default function SignupPage() {
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' })
 
+      if (data.user.identities && data.user.identities.length === 0) {
+        setView('check-email');
+        return;
+      }
+
       if (role === 'counselor') {
         router.push('/counselor/dashboard')
       } else {
@@ -86,10 +95,16 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (err) { setError(err.message); return; }
-    router.push("/dashboard");
+    const uid = data.user?.id;
+    if (uid) {
+      const { data: prof } = await supabase.from("profiles").select("role").eq("user_id", uid).maybeSingle();
+      router.push(prof?.role === "counselor" ? "/counselor/dashboard" : "/dashboard");
+    } else {
+      router.push("/dashboard");
+    }
   }
 
   async function handleForgot(e: React.FormEvent) {

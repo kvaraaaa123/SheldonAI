@@ -13,6 +13,7 @@ type ProfileData = {
   passion_description: string | null;
   sat_score: number | null;
   act_score: number | null;
+  role: string | null;
 };
 
 export default function DashboardPage() {
@@ -36,11 +37,14 @@ export default function DashboardPage() {
       const uid = data.session.user.id;
       setUserEmail(data.session.user.email ?? "");
       const [{ data: profile }, { data: colleges }, { count: essays }] = await Promise.all([
-        supabase.from("profiles").select("full_name, onboarding_complete, gpa, passion_description, sat_score, act_score").eq("user_id", uid).maybeSingle(),
+        supabase.from("profiles").select("full_name, onboarding_complete, gpa, passion_description, sat_score, act_score, role").eq("user_id", uid).maybeSingle(),
         supabase.from("college_lists").select("id").eq("user_id", uid),
         supabase.from("essays").select("id", { count: "exact" }).eq("user_id", uid),
       ]);
-      if (profile) setProfileData(profile as ProfileData);
+      if (profile) {
+        setProfileData(profile as ProfileData);
+        if ((profile as ProfileData).role === "counselor") { router.push("/counselor/dashboard"); return; }
+      }
       if (colleges) setSavedCollegeCount(colleges.length);
       setEssayCount(essays ?? 0);
     });

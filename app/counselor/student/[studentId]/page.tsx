@@ -117,13 +117,13 @@ export default function StudentDetailPage() {
           .select("user_id, full_name, email, gpa, sat_score, sat_math, sat_reading, act_score, intended_major, academic_interests, academic_style, school_type, campus_environment, financial_aid_need, us_citizenship, country_of_origin, english_test_type, english_test_score, other_test_scores")
           .eq("user_id", studentId).maybeSingle(),
         supabase.from("college_lists").select("id, university_name, status").eq("user_id", studentId),
-        supabase.from("activity_grades").select("grades").eq("user_id", studentId).maybeSingle(),
+        supabase.from("activity_grades").select("activities, results").eq("user_id", studentId).maybeSingle(),
       ]);
 
       if (studentProfile) setProfile(studentProfile as StudentProfile);
       if (collegeData) setColleges(collegeData as CollegeEntry[]);
-      if (actData?.grades) {
-        try { setActivityData(typeof actData.grades === "string" ? JSON.parse(actData.grades) : actData.grades); }
+      if (actData?.activities) {
+        try { setActivityData(typeof actData.activities === "string" ? JSON.parse(actData.activities) : actData.activities); }
         catch { setActivityData(null); }
       }
       fetchNotes(uid);

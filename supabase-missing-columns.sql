@@ -1,4 +1,21 @@
 -- Run this in the Supabase SQL Editor (https://supabase.com/dashboard → SQL Editor)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role text DEFAULT 'student';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS second_citizenship_country text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS unique_personal_trait text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS anything_else text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS sat_score text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS sat_math text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS sat_reading text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS act_score text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS other_test_scores text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS academic_interests text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS intended_major text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS academic_style text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS career_goals text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS why_this_major text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS family_income_bracket text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS first_gen text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS css_profile_aware text;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS academic_intensity text;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS campus_environment text;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS campus_size text;
