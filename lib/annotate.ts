@@ -1026,6 +1026,7 @@ export async function annotateEssay(
   const response = await anthropic.messages.create({
     model: "claude-opus-4-5",
     max_tokens: 8000,
+    temperature: 0,
     system: SYSTEM_PROMPT,
     messages: [
       {
