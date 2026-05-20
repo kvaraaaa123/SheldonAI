@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "SheldonAI Essay Annotator",
+  "version": "1.0.0",
+  "description": "Annotate your college essay in Google Docs with SheldonAI sentence-level feedback.",
+  "permissions": ["identity", "activeTab"],
+  "host_permissions": [
+    "https://docs.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://sheldon-ai-red.vercel.app/*"
+  ],
+  "oauth2": {
+    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/documents.readonly",
+      "https://www.googleapis.com/auth/drive"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SheldonAI Essay Annotator"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
